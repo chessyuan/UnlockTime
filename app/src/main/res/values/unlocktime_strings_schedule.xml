@@ -1,0 +1,58 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="schedule_title">Scheduled tasks</string>
+    <string name="schedule_add_task">Add task</string>
+    <string name="schedule_default_name">Scheduled unlock</string>
+    <string name="schedule_task_limit">You can save up to 32 tasks.</string>
+    <string name="schedule_empty">No scheduled tasks yet.</string>
+    <string name="schedule_deleted">Task deleted.</string>
+    <string name="schedule_edit">Edit</string>
+    <string name="schedule_save">Save</string>
+    <string name="schedule_new_title">New scheduled task</string>
+    <string name="schedule_edit_title">Edit scheduled task</string>
+    <string name="schedule_toggle">Enable %1$s</string>
+    <string name="schedule_hide_tests">Hide completed tests</string>
+    <string name="schedule_show_tests">Show completed tests</string>
+    <string name="schedule_clock">%1$02d:%2$02d</string>
+    <string name="schedule_timing">%1$s · %2$s</string>
+    <string name="schedule_one_time">One time · %1$s</string>
+    <string name="schedule_unlock_only">Unlock only</string>
+    <string name="schedule_name">Task name</string>
+    <string name="schedule_name_error">Enter a name of up to 80 characters.</string>
+    <string name="schedule_hour">Hour (24-hour)</string>
+    <string name="schedule_minute">Minute</string>
+    <string name="schedule_time_error">Use 0–23 for the hour and 0–59 for minutes.</string>
+    <string name="schedule_repeat">Repeat on</string>
+    <string name="schedule_repeat_error">Choose at least one day.</string>
+    <string name="schedule_every_day">Every day</string>
+    <string name="schedule_day_separator">", "</string>
+    <string-array name="schedule_weekdays">
+        <item>Mon</item>
+        <item>Tue</item>
+        <item>Wed</item>
+        <item>Thu</item>
+        <item>Fri</item>
+        <item>Sat</item>
+        <item>Sun</item>
+    </string-array>
+    <string name="schedule_apps_title">Apps after unlocking</string>
+    <string name="schedule_apps_help">Apps open in the order shown. Each wait comes before its app.</string>
+    <string name="schedule_app_numbered">%1$d. %2$s</string>
+    <string name="schedule_app_unavailable">App unavailable</string>
+    <string name="schedule_app_unavailable_package">Unavailable · %1$s</string>
+    <string name="schedule_wait_field">Wait before opening (seconds)</string>
+    <string name="schedule_wait_error">Enter 0–30 seconds with up to 3 decimal places.</string>
+    <string name="schedule_wait_display">Wait %1$s s</string>
+    <string name="schedule_no_wait">No wait</string>
+    <string name="schedule_total_wait_error">The combined wait must be 30 seconds or less.</string>
+    <string name="schedule_add_app">Add app</string>
+    <string name="schedule_app_limit">Up to 5 apps per task.</string>
+    <string name="schedule_move_up">Move up</string>
+    <string name="schedule_move_down">Move down</string>
+    <string name="schedule_remove_app">Remove</string>
+    <string name="schedule_choose_app">Choose an app</string>
+    <string name="schedule_search_apps">Search apps</string>
+    <string name="schedule_loading_apps">Loading apps…</string>
+    <string name="schedule_no_apps_available">No apps available to open.</string>
+    <string name="schedule_no_app_matches">No matching apps.</string>
+</resources>

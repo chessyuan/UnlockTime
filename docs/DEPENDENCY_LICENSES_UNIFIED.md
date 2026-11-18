@@ -1,0 +1,141 @@
+# Unified dependency license inventory
+
+Generated from the actual AboutLibraries debug runtime inventory. Versions are build evidence, not a claim of independent license audit of every transitive file. Full embedded notices and generated JSON accompany the APK.
+
+| Dependency | Version | License IDs |
+|---|---|---|
+| androidx.activity:activity | 1.13.0 | Apache-2.0 |
+| androidx.activity:activity-compose | 1.13.0 | Apache-2.0 |
+| androidx.activity:activity-ktx | 1.13.0 | Apache-2.0 |
+| androidx.annotation:annotation | 1.10.0 | Apache-2.0 |
+| androidx.annotation:annotation-experimental | 1.4.1 | Apache-2.0 |
+| androidx.arch.core:core-common | 2.2.0 | Apache-2.0 |
+| androidx.arch.core:core-runtime | 2.2.0 | Apache-2.0 |
+| androidx.autofill:autofill | 1.0.0 | Apache-2.0 |
+| androidx.collection:collection | 1.6.0 | Apache-2.0 |
+| androidx.collection:collection-ktx | 1.6.0 | Apache-2.0 |
+| androidx.compose.animation:animation | 1.12.1 | Apache-2.0 |
+| androidx.compose.animation:animation-core | 1.12.1 | Apache-2.0 |
+| androidx.compose.foundation:foundation | 1.12.1 | Apache-2.0 |
+| androidx.compose.foundation:foundation-layout | 1.12.1 | Apache-2.0 |
+| androidx.compose.material3:material3 | 1.4.0 | Apache-2.0 |
+| androidx.compose.material:material-ripple | 1.12.1 | Apache-2.0 |
+| androidx.compose.runtime:runtime | 1.12.1 | Apache-2.0 |
+| androidx.compose.runtime:runtime-annotation | 1.12.1 | Apache-2.0 |
+| androidx.compose.runtime:runtime-retain | 1.12.1 | Apache-2.0 |
+| androidx.compose.runtime:runtime-saveable | 1.12.1 | Apache-2.0 |
+| androidx.compose.ui:ui | 1.12.1 | Apache-2.0 |
+| androidx.compose.ui:ui-geometry | 1.12.1 | Apache-2.0 |
+| androidx.compose.ui:ui-graphics | 1.12.1 | Apache-2.0 |
+| androidx.compose.ui:ui-text | 1.12.1 | Apache-2.0 |
+| androidx.compose.ui:ui-text-google-fonts | 1.12.1 | Apache-2.0 |
+| androidx.compose.ui:ui-unit | 1.12.1 | Apache-2.0 |
+| androidx.compose.ui:ui-util | 1.12.1 | Apache-2.0 |
+| androidx.compose:compose-bom | 2026.09.00 | Apache-2.0 |
+| androidx.concurrent:concurrent-futures | 1.1.0 | Apache-2.0 |
+| androidx.concurrent:concurrent-futures-ktx | 1.1.0 | Apache-2.0 |
+| androidx.core:core | 1.19.0 | Apache-2.0 |
+| androidx.core:core-ktx | 1.19.0 | Apache-2.0 |
+| androidx.core:core-remoteviews | 1.1.0 | Apache-2.0 |
+| androidx.core:core-viewtree | 1.0.0 | Apache-2.0 |
+| androidx.customview:customview | 1.0.0 | Apache-2.0 |
+| androidx.customview:customview-poolingcontainer | 1.0.0 | Apache-2.0 |
+| androidx.datastore:datastore | 1.3.0 | Apache-2.0 |
+| androidx.datastore:datastore-core | 1.3.0 | Apache-2.0 |
+| androidx.datastore:datastore-core-okio | 1.3.0 | Apache-2.0 |
+| androidx.datastore:datastore-preferences | 1.3.0 | Apache-2.0 |
+| androidx.datastore:datastore-preferences-core | 1.3.0 | Apache-2.0 |
+| androidx.datastore:datastore-preferences-external-protobuf | 1.3.0 | BSD-3-Clause |
+| androidx.datastore:datastore-preferences-proto | 1.3.0 | Apache-2.0 |
+| androidx.emoji2:emoji2 | 1.4.0 | Apache-2.0 |
+| androidx.exifinterface:exifinterface | 1.4.2 | Apache-2.0 |
+| androidx.fragment:fragment | 1.9.1 | Apache-2.0 |
+| androidx.glance:glance | 1.2.0 | Apache-2.0 |
+| androidx.glance:glance-appwidget | 1.2.0 | Apache-2.0 |
+| androidx.glance:glance-appwidget-external-protobuf | 1.2.0 | BSD-3-Clause |
+| androidx.glance:glance-appwidget-proto | 1.2.0 | Apache-2.0 |
+| androidx.glance:glance-material3 | 1.2.0 | Apache-2.0 |
+| androidx.graphics:graphics-path | 1.0.1 | Apache-2.0 |
+| androidx.interpolator:interpolator | 1.0.0 | Apache-2.0 |
+| androidx.lifecycle:lifecycle-common | 2.10.0 | Apache-2.0 |
+| androidx.lifecycle:lifecycle-common-java8 | 2.10.0 | Apache-2.0 |
+| androidx.lifecycle:lifecycle-livedata | 2.10.0 | Apache-2.0 |
+| androidx.lifecycle:lifecycle-livedata-core | 2.10.0 | Apache-2.0 |
+| androidx.lifecycle:lifecycle-livedata-core-ktx | 2.10.0 | Apache-2.0 |
+| androidx.lifecycle:lifecycle-process | 2.10.0 | Apache-2.0 |
+| androidx.lifecycle:lifecycle-runtime | 2.10.0 | Apache-2.0 |
+| androidx.lifecycle:lifecycle-runtime-compose | 2.10.0 | Apache-2.0 |
+| androidx.lifecycle:lifecycle-runtime-ktx | 2.10.0 | Apache-2.0 |
+| androidx.lifecycle:lifecycle-service | 2.10.0 | Apache-2.0 |
+| androidx.lifecycle:lifecycle-viewmodel | 2.10.0 | Apache-2.0 |
+| androidx.lifecycle:lifecycle-viewmodel-ktx | 2.10.0 | Apache-2.0 |
+| androidx.lifecycle:lifecycle-viewmodel-savedstate | 2.10.0 | Apache-2.0 |
+| androidx.loader:loader | 1.0.0 | Apache-2.0 |
+| androidx.navigationevent:navigationevent | 1.0.0 | Apache-2.0 |
+| androidx.navigationevent:navigationevent-compose | 1.0.0 | Apache-2.0 |
+| androidx.profileinstaller:profileinstaller | 1.4.0 | Apache-2.0 |
+| androidx.room:room-common | 2.7.0 | Apache-2.0 |
+| androidx.room:room-runtime | 2.7.0 | Apache-2.0 |
+| androidx.savedstate:savedstate | 1.5.0 | Apache-2.0 |
+| androidx.savedstate:savedstate-compose | 1.5.0 | Apache-2.0 |
+| androidx.savedstate:savedstate-ktx | 1.5.0 | Apache-2.0 |
+| androidx.sqlite:sqlite | 2.5.0 | Apache-2.0 |
+| androidx.sqlite:sqlite-framework | 2.5.0 | Apache-2.0 |
+| androidx.startup:startup-runtime | 1.2.0 | Apache-2.0 |
+| androidx.tracing:tracing | 2.0.1 | Apache-2.0 |
+| androidx.tracing:tracing-ktx | 2.0.1 | Apache-2.0 |
+| androidx.versionedparcelable:versionedparcelable | 1.1.1 | Apache-2.0 |
+| androidx.viewpager:viewpager | 1.0.0 | Apache-2.0 |
+| androidx.window:window | 1.5.0 | Apache-2.0 |
+| androidx.window:window-core | 1.5.0 | Apache-2.0 |
+| androidx.work:work-runtime | 2.12.0 | Apache-2.0 |
+| androidx.work:work-runtime-ktx | 2.12.0 | Apache-2.0 |
+| com.anthropic:anthropic-java | 3.6.0 | Apache-2.0 |
+| com.anthropic:anthropic-java-client-okhttp | 3.6.0 | Apache-2.0 |
+| com.anthropic:anthropic-java-core | 3.6.0 | Apache-2.0 |
+| com.fasterxml.jackson.core:jackson-annotations | 2.19.4 | Apache-2.0 |
+| com.fasterxml.jackson.core:jackson-core | 2.19.4 | Apache-2.0 |
+| com.fasterxml.jackson.core:jackson-databind | 2.19.4 | Apache-2.0 |
+| com.fasterxml.jackson.datatype:jackson-datatype-jdk8 | 2.19.4 | Apache-2.0 |
+| com.fasterxml.jackson.datatype:jackson-datatype-jsr310 | 2.19.4 | Apache-2.0 |
+| com.fasterxml.jackson.module:jackson-module-kotlin | 2.19.4 | Apache-2.0 |
+| com.fasterxml.jackson:jackson-bom | 2.19.4 | Apache-2.0 |
+| com.fasterxml:classmate | 1.7.0 | Apache-2.0 |
+| com.github.victools:jsonschema-generator | 4.38.0 | Apache-2.0 |
+| com.github.victools:jsonschema-module-jackson | 4.38.0 | Apache-2.0 |
+| com.github.victools:jsonschema-module-swagger-2 | 4.38.0 | Apache-2.0 |
+| com.google.android.gms:play-services-base | 18.9.0 | ASDKL |
+| com.google.android.gms:play-services-basement | 18.9.0 | ASDKL |
+| com.google.android.gms:play-services-location | 21.4.0 | ASDKL |
+| com.google.android.gms:play-services-tasks | 18.4.0 | ASDKL |
+| com.google.errorprone:error_prone_annotations | 2.50.0 | Apache-2.0 |
+| com.google.guava:listenablefuture | 1.0 | Apache-2.0 |
+| com.squareup.okhttp3:okhttp | 5.5.1 | Apache-2.0 |
+| com.squareup.okio:okio | 3.18.1 | Apache-2.0 |
+| com.standardwebhooks:standardwebhooks | 1.2.0 | MIT |
+| io.opentelemetry:opentelemetry-api | 1.62.0 | Apache-2.0 |
+| io.opentelemetry:opentelemetry-common | 1.62.0 | Apache-2.0 |
+| io.opentelemetry:opentelemetry-context | 1.62.0 | Apache-2.0 |
+| io.swagger.core.v3:swagger-annotations | 2.2.50 | Apache-2.0 |
+| org.jetbrains.kotlin:kotlin-reflect | 2.4.21 | Apache-2.0 |
+| org.jetbrains.kotlin:kotlin-stdlib | 2.4.21 | Apache-2.0 |
+| org.jetbrains.kotlin:kotlin-stdlib-jdk7 | 1.9.0 | Apache-2.0 |
+| org.jetbrains.kotlin:kotlin-stdlib-jdk8 | 1.9.0 | Apache-2.0 |
+| org.jetbrains.kotlinx:atomicfu | 0.28.0 | Apache-2.0 |
+| org.jetbrains.kotlinx:kotlinx-coroutines-android | 1.11.0 | Apache-2.0 |
+| org.jetbrains.kotlinx:kotlinx-coroutines-bom | 1.11.0 | Apache-2.0 |
+| org.jetbrains.kotlinx:kotlinx-coroutines-core | 1.11.0 | Apache-2.0 |
+| org.jetbrains.kotlinx:kotlinx-serialization-bom | 1.12.0 | Apache-2.0 |
+| org.jetbrains.kotlinx:kotlinx-serialization-core | 1.12.0 | Apache-2.0 |
+| org.jetbrains.kotlinx:kotlinx-serialization-json | 1.12.0 | Apache-2.0 |
+| org.jetbrains:annotations | 23.0.0 | Apache-2.0 |
+| org.jspecify:jspecify | 1.0.0 | Apache-2.0 |
+| org.osmdroid:osmdroid-android | 6.1.20 | Apache-2.0 |
+| org.slf4j:slf4j-api | 2.0.16 | MIT |
+
+## License links
+
+- ASDKL: https://developer.android.com/studio/terms.html (linked terms; no full text in generator)
+- Apache-2.0: https://spdx.org/licenses/Apache-2.0.html (text included)
+- BSD-3-Clause: https://spdx.org/licenses/BSD-3-Clause.html (text included)
+- MIT: https://spdx.org/licenses/MIT.html (text included)

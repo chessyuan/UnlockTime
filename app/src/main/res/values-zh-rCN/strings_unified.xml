@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources><string name="unified_accessibility_description">UnlockTime 为你的 AI 任务读取普通应用界面、截取系统允许的屏幕并执行手势。任务所需的屏幕内容可能发送给你选择的模型服务。设备认证只使用本机加密保存的凭据，认证页面和凭据不提供给 AI。你可以随时在系统设置中关闭服务。</string></resources>

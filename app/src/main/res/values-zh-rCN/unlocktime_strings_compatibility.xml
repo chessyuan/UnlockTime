@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="compat_inspect">只检查，不输入密码</string>
+    <string name="compat_inspect_name">锁屏界面检查</string>
+    <string name="compat_inspect_detail">可先检查锁屏界面，不输入任何密码。请锁屏，再自行上滑，露出图案或键盘。</string>
+    <string name="compat_inspect_prompt">将在 10 秒后检查。请锁屏并上滑，露出图案或键盘。完成后手动解锁，即可查看结果。</string>
+    <string name="compat_inspection_success">已识别锁屏界面，没有输入密码。</string>
+    <string name="compat_inspection_unknown">未能确认锁屏界面，没有输入密码。</string>
+    <string name="compat_title">设备兼容性</string>
+    <string name="compat_settings_detail">查看本机测试结果或保存脱敏报告</string>
+    <string name="compat_verified">已在这台手机上测试成功</string>
+    <string name="compat_profile">相同配置已有测试记录</string>
+    <string name="compat_detected">已识别锁屏，等待完整测试</string>
+    <string name="compat_unsupported">暂不支持这种锁屏界面</string>
+    <string name="compat_unknown">这台手机还需要测试</string>
+    <string name="compat_permissions">请先开启必要权限</string>
+    <string name="compat_detail">在首页点击测试，然后锁屏。测试结果只适用于当时的解锁方式和系统版本。其他手机成功，不代表本机已经验证。</string>
+    <string name="compat_last_checked">上次检查：%1$s</string>
+    <string name="compat_export">保存兼容性报告</string>
+    <string name="compat_export_detail">由你选择报告保存位置。报告只含设备信息、已识别控件和测试结果，不含密码、图案、屏幕文字或截图，不会自动上传。</string>
+    <string name="compat_export_saved">报告已保存</string>
+    <string name="compat_export_failed">报告保存失败，请重试。</string>
+    <string name="compat_emulator">这是模拟器测试结果，不代表实体手机已经验证。</string>
+</resources>

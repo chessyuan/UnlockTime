@@ -1,0 +1,9 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <!-- Transparent black/white mark, fading into transparency. Notification tint belongs to Android. -->
+    <path android:fillColor="@color/unlocktime_mark" android:pathData="M6,3.5a2.5,2.5 0,1 0,0 5a2.5,2.5 0,1 0,0 -5" />
+    <path android:fillColor="@color/unlocktime_mark" android:fillAlpha="0.94" android:pathData="M12,3.5a2.5,2.5 0,1 0,0 5a2.5,2.5 0,1 0,0 -5 M6,9.5a2.5,2.5 0,1 0,0 5a2.5,2.5 0,1 0,0 -5" />
+    <path android:fillColor="@color/unlocktime_mark" android:fillAlpha="0.80" android:pathData="M18,3.5a2.5,2.5 0,1 0,0 5a2.5,2.5 0,1 0,0 -5 M12,9.5a2.5,2.5 0,1 0,0 5a2.5,2.5 0,1 0,0 -5 M6,15.5a2.5,2.5 0,1 0,0 5a2.5,2.5 0,1 0,0 -5" />
+    <path android:fillColor="@color/unlocktime_mark" android:fillAlpha="0.30" android:pathData="M18,9.5a2.5,2.5 0,1 0,0 5a2.5,2.5 0,1 0,0 -5 M12,15.5a2.5,2.5 0,1 0,0 5a2.5,2.5 0,1 0,0 -5" />
+    <path android:fillColor="@color/unlocktime_mark" android:fillAlpha="0.08" android:pathData="M18,15.5a2.5,2.5 0,1 0,0 5a2.5,2.5 0,1 0,0 -5" />
+</vector>

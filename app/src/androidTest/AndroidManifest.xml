@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- AGP supplies the runner name from testInstrumentationRunner. This is the test APK only. -->
+    <application android:testOnly="true" />
+    <instrumentation
+        android:name="org.localwake.app.SamsungUpgradeInstrumentation"
+        android:targetPackage="org.localwake.app"
+        android:functionalTest="true"
+        android:handleProfiling="false"
+        android:label="UnlockTime device verification" />
+</manifest>

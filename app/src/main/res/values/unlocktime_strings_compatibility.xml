@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="compat_inspect">Check without entering a credential</string>
+    <string name="compat_inspect_name">Lock screen check</string>
+    <string name="compat_inspect_detail">Optional: check the lock screen first without entering anything. Lock the phone and swipe up yourself to show the pattern or keypad.</string>
+    <string name="compat_inspect_prompt">Checking in 10 seconds. Lock the phone, then swipe up to show its pattern or keypad. Unlock manually afterward to see the result.</string>
+    <string name="compat_inspection_success">Lock screen recognized. No credential was entered.</string>
+    <string name="compat_inspection_unknown">Could not confirm the lock screen. No credential was entered.</string>
+    <string name="compat_title">Device compatibility</string>
+    <string name="compat_settings_detail">View this phone’s test result or save a private report</string>
+    <string name="compat_verified">Test passed on this phone</string>
+    <string name="compat_profile">A matching device has been tested</string>
+    <string name="compat_detected">Lock screen detected · test needed</string>
+    <string name="compat_unsupported">This lock screen is not supported</string>
+    <string name="compat_unknown">This phone still needs a test</string>
+    <string name="compat_permissions">Enable the required permissions first</string>
+    <string name="compat_detail">Use Test on the home page, then lock your phone. A result is saved only for the lock method and system version that were checked. Success on another phone does not confirm yours.</string>
+    <string name="compat_last_checked">Last check: %1$s</string>
+    <string name="compat_export">Save compatibility report</string>
+    <string name="compat_export_detail">You choose where to save the report. It contains device information, recognized controls and the test result. It contains no password, pattern, screen text or screenshots. Nothing is uploaded automatically.</string>
+    <string name="compat_export_saved">Report saved</string>
+    <string name="compat_export_failed">Could not save the report. Please try again.</string>
+    <string name="compat_emulator">This result is from an emulator. It does not verify a physical phone.</string>
+</resources>

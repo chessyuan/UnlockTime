@@ -1,0 +1,58 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="schedule_title">定时任务</string>
+    <string name="schedule_add_task">新增任务</string>
+    <string name="schedule_default_name">定时解锁</string>
+    <string name="schedule_task_limit">最多可保存 32 个任务。</string>
+    <string name="schedule_empty">还没有定时任务。</string>
+    <string name="schedule_deleted">任务已删除。</string>
+    <string name="schedule_edit">编辑</string>
+    <string name="schedule_save">保存</string>
+    <string name="schedule_new_title">新建定时任务</string>
+    <string name="schedule_edit_title">编辑定时任务</string>
+    <string name="schedule_toggle">启用 %1$s</string>
+    <string name="schedule_hide_tests">收起已结束的测试</string>
+    <string name="schedule_show_tests">查看已结束的测试</string>
+    <string name="schedule_clock">%1$02d:%2$02d</string>
+    <string name="schedule_timing">%1$s · %2$s</string>
+    <string name="schedule_one_time">单次 · %1$s</string>
+    <string name="schedule_unlock_only">仅解锁</string>
+    <string name="schedule_name">任务名称</string>
+    <string name="schedule_name_error">请输入任务名称，最多 80 个字符。</string>
+    <string name="schedule_hour">小时（24 小时制）</string>
+    <string name="schedule_minute">分钟</string>
+    <string name="schedule_time_error">小时请输入 0–23，分钟请输入 0–59。</string>
+    <string name="schedule_repeat">重复日期</string>
+    <string name="schedule_repeat_error">请至少选择一天。</string>
+    <string name="schedule_every_day">每天</string>
+    <string name="schedule_day_separator">、</string>
+    <string-array name="schedule_weekdays">
+        <item>周一</item>
+        <item>周二</item>
+        <item>周三</item>
+        <item>周四</item>
+        <item>周五</item>
+        <item>周六</item>
+        <item>周日</item>
+    </string-array>
+    <string name="schedule_apps_title">解锁后打开的应用</string>
+    <string name="schedule_apps_help">应用会按列表顺序打开。可为每个应用设置打开前的等待时间。</string>
+    <string name="schedule_app_numbered">%1$d. %2$s</string>
+    <string name="schedule_app_unavailable">应用不可用</string>
+    <string name="schedule_app_unavailable_package">不可用 · %1$s</string>
+    <string name="schedule_wait_field">打开前等待（秒）</string>
+    <string name="schedule_wait_error">请输入 0–30 秒，最多保留 3 位小数。</string>
+    <string name="schedule_wait_display">等待 %1$s 秒</string>
+    <string name="schedule_no_wait">直接打开</string>
+    <string name="schedule_total_wait_error">等待时间合计不能超过 30 秒。</string>
+    <string name="schedule_add_app">添加应用</string>
+    <string name="schedule_app_limit">每个任务最多可添加 5 个应用。</string>
+    <string name="schedule_move_up">上移</string>
+    <string name="schedule_move_down">下移</string>
+    <string name="schedule_remove_app">移除</string>
+    <string name="schedule_choose_app">选择应用</string>
+    <string name="schedule_search_apps">搜索应用</string>
+    <string name="schedule_loading_apps">正在加载应用…</string>
+    <string name="schedule_no_apps_available">没有可打开的应用。</string>
+    <string name="schedule_no_app_matches">没有找到匹配的应用。</string>
+</resources>

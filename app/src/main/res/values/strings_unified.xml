@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources><string name="unified_accessibility_description">UnlockTime reads normal app screens, takes permitted screenshots and performs gestures for your AI tasks. Screen content may be sent to your chosen model provider. Device authentication uses only the encrypted credentials stored on this phone. Authentication screens and credentials are not shared with the AI. You can disable the service in system settings.</string></resources>
