@@ -44,4 +44,4 @@ AgentRunner, AgentLoop/Helper, ToolExecutor, controller, Assist suggestions, scr
 
 Native execution reserves a handoff slot and bounded wake lock before claiming, then runs in the application scope so broadcast callers finish promptly. The same device coordinator arbitrates against AI. Edits cancel the native handoff/lease and invalidate the persisted revision. Work deferred due to a busy device resumes when ownership becomes free. No new task grant is needed; AI routines inherit the local global setting.
 
-See the [screen-access inventory](UNIFIED_SCREEN_ACCESS_INVENTORY.md) and [device test results](evidence/validation-summary.json).
+See [migration details](UNIFIED_MIGRATION.md), [security review](UNIFIED_SECURITY_REVIEW.md), [screen access inventory](UNIFIED_SCREEN_ACCESS_INVENTORY.md) and [test evidence](UNIFIED_TEST_REPORT.md). A source-level architecture description is not a real-device compatibility claim.

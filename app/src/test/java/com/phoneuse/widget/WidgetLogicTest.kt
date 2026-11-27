@@ -45,6 +45,13 @@ class WidgetLogicTest {
 
     private val token = LaunchToken(ByteArray(32) { it.toByte() })
 
+    @Test fun aLongSignedTaskIsAcceptedInFullAndAnyEditedSuffixIsRejected() {
+        val prompt = "检查任务🗓️\n".repeat(1100) + "最后一步"
+        val signed = token.sign(LaunchToken.widgetPrompt(true, null, prompt))
+        assertEquals(prompt, WidgetLinks.accept(token, prompt, true, -1, signed)?.text)
+        assertNull(WidgetLinks.accept(token, prompt + "x", true, -1, signed))
+    }
+
     @Test
     fun aSignedPromptIsAccepted() {
         val sig = token.sign(LaunchToken.widgetPrompt(false, null, "알림 요약해줘"))

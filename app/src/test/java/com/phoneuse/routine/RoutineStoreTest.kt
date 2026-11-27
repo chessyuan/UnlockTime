@@ -12,6 +12,19 @@ class RoutineStoreTest {
     private fun routine(title: String, trigger: Trigger = Trigger.Time(8, 0)) =
         Routine(title = title, trigger = trigger, action = RoutineAction.Notify("x"))
 
+    @Test fun longTaskTextSurvivesEditingStorageAndScheduledExecution() {
+        val text = "每天检查预约。🗓️\n".repeat(500) + "最后一步：报告核实结果"
+        val draft = RoutineDraft(title = "长任务", prompt = text)
+        val defined = draft.toRoutine()
+        org.junit.Assert.assertTrue(defined.toString(), defined is RoutineParse.Ok)
+        val file = tmp.root.resolve("long-routines.json")
+        val saved = RoutineStore(file).save((defined as RoutineParse.Ok).routine)
+        val reopened = requireNotNull(RoutineStore(file).get(saved.id))
+        assertEquals(text, RoutineDraft.from(reopened).prompt)
+        val prompt = (reopened.action as RoutineAction.Ask).prompt
+        org.junit.Assert.assertTrue(RoutinePrompt.build(reopened, prompt, RoutineEvent.TimeDue(reopened.id)).contains(text))
+    }
+
     @Test
     fun aFailedWriteFromTheScreenReportsFalseAndChangesNothing() {
         // A full or read-only disk must not throw into a click handler.

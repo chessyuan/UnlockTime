@@ -1,39 +1,83 @@
 # UnlockTime
 
-[English](README.en.md) · [下载 v0.5.0（Debug APK）](https://github.com/chessyuan/UnlockTime/releases/tag/v0.5.0)
+[English](README.en.md) · [下载 v0.6.4 / build17](https://github.com/chessyuan/UnlockTime/releases/tag/v0.6.4) · [验证记录](docs/UNIFIED_TEST_REPORT.md)
 
-**目前仅适配三星 Galaxy S24+。实测机型为 SM-S9260，Android 16，图案锁屏。其余机型均未适配，包括 S24 和 S24 Ultra。** 其他 S24+ 地区型号和系统版本尚无实机验证记录。PIN 和密码输入目前仅在安卓模拟器上验证。
+**目前仅完整适配三星 Galaxy S24+（SM-S9260 / Android 16 / 图案锁屏）。其余机型未完成适配，包括 S24、S24 Ultra，以及其他地区版本的 S24+。PIN 和密码仅有模拟器验证，不能视为其他实体机已兼容。**
 
-UnlockTime 可以在手机锁屏时开始执行定时任务。例如，把“打开应用查看预约”设为每天早上执行，到点后手机会自动亮屏。已经解锁就直接操作，需要解锁时就由手机本地完成认证，确认解锁成功后再继续。只需设置日常任务的时间，无需单独安排解锁闹钟。
+UnlockTime 将 AI 手机操作、本地自动解锁、定时任务和本地连续点击放在同一个应用中。只需设置日常任务：到点后，手机已解锁就直接操作；需要解锁时，由本机完成一次认证，确认解锁后继续任务。无需再单独设置一个解锁闹钟。
+
+当前发布的是 **0.6.4 / build17 Debug APK**，与真实手机验证的安装包相同。没有承诺所有 Android 设备或所有网站业务都能成功。
 
 ## 相比 OpenPhoneUse，多了什么？
 
-| 使用场景 | 原项目 OpenPhoneUse 0.0.7 | UnlockTime 0.5.0 |
-| --- | --- | --- |
-| 定时任务到点，手机还锁着 | 发通知，提示用户解锁 | 开启本地自动解锁后，软件唤醒手机，尝试一次认证，成功后继续执行 |
-| 定时依次打开几个应用 | 内置“打开应用”动作一次指定一个应用 | 在同一任务中编排最多五步，指定每一步打开哪个应用、打开前等多久。整个序列在本地执行，无需模型 |
-| 定时让 AI 操作手机 | AI 可以读屏、点击、滑动、输入文字 | 沿用这些能力，系统确认解锁后才交给 AI 操作。中途重新锁屏会停止读屏。纯聊天和仅通知的任务可以在锁屏时执行 |
+以下以整合时固定的 OpenPhoneUse 0.0.7 源码为对照，不代表对上游未来版本的比较。
 
-AI 对话、模型连接和任务框架来自 OpenPhoneUse。定时唤醒和本机认证来自原 UnlockTime（LocalWake）。两者共用一个应用和一个无障碍服务。原 UnlockTime 用户可覆盖升级，沿用已有凭据、任务和历史记录。[原项目处理锁屏任务的源码](https://github.com/joungminsung/OpenPhoneUse/blob/c980cbf134a5d5eb1ec6cd0d097fcfabc45d6a73/app/src/main/java/com/phoneuse/routine/RoutineEngine.kt#L62)
+| 场景 | OpenPhoneUse 整合基线 | UnlockTime 0.6.4 |
+| --- | --- | --- |
+| 定时任务到点，手机锁着 | 通知用户解锁后再执行 | 自动唤醒、本地认证一次，系统确认解锁后继续 |
+| 连续点击一个位置 | 普通 tap / batch 等通用操作 | 独立 `repeat_tap`，一次模型调用让本机完成整段点击，按实际手势完成回调计数 |
+| 连点过程中普通页面变化 | 由通用任务步骤处理 | 默认继续同一坐标；也可明确指定页面变化即停止 |
+| 按顺序打开多个应用 | 单个打开应用动作 | 同一任务最多五步，保留应用顺序和每步打开前的等待时间，无需模型 |
+| 长定时任务说明 | 继承的任务编辑限制 | 移除原 1000 字限制，保存完整任务文本 |
+| AI 读屏与本地认证 | AI 自动化引擎 | 单一无障碍服务、统一设备占用；本地凭据和认证页面不交给模型 |
+
+AI 对话、模型连接、界面和 Agent 框架来自 [OpenPhoneUse](https://github.com/joungminsung/OpenPhoneUse)。本机唤醒与认证来自 UnlockTime（原 LocalWake）。还吸收了 OpenPhoneUse v0.0.8 的屏幕截取保护修复，**没有宣称整体升级到了上游最新主分支**。保留原作者版权，不宣称获得官方背书。
+
+## 本地连续点击
+
+直接对 AI 说：“在这个按钮的位置连续点击 60 次，每次间隔 1000 毫秒。”目标不清楚时先定位或询问；位置根据当前页面确定。
+
+- 支持点坐标，或矩形内的一个固定位置，不随机散点。
+- 默认 10 次、间隔 1000 毫秒；单次最多 60 次。
+- 整段点击在手机本地完成，点击之间不反复请求模型。
+- `stop_on_page_change=false` 为默认模式，同一应用内普通页面变化仍点击原位置；`true` 表示变化时停止。
+- 完成后返回 `requested`、实际 `completed` 和 `stop_reason`。
+- 用户停止、设备重新锁定、无障碍断开、捕获受保护或切换到不允许的界面仍会停止。现有风险确认保留，不能保证任何情况下都强制点满。
+
+0.6.4 修复了完整任务包含“不要设置 stop_on_page_change=true”时被误判为只讨论、不执行，返回 `NOT RUN` 的问题。没有加入特定图书馆业务判断或自动改写任务结果。
+
+指令识别仍含关键词规则，将“示例、代码”等讨论词语与执行指令混写时可能被误分类；请以实际工具回执判断是否执行完成。
 
 ## 第一次使用
 
-1. 从[版本发布页](https://github.com/chessyuan/UnlockTime/releases)下载 APK。已装同签名 UnlockTime 的用户可以直接覆盖安装。
-2. 在“设备设置”中启用 UnlockTime 无障碍服务，允许精确闹钟，填写与系统锁屏一致的凭据。自动解锁默认开启。
-3. 如果任务需要 AI，在 AI 设置中登录 ChatGPT 或配置支持的模型。在任务编辑页选择执行时间、重复日期和动作，可以单次执行，也可以每天或按星期重复。
+1. 从[发布页](https://github.com/chessyuan/UnlockTime/releases)下载 APK。已安装同签名 UnlockTime 时直接覆盖升级；不要卸载或清除数据。
+2. 在设备设置中启用 UnlockTime 无障碍服务，允许精确闹钟和需要的通知权限，配置与系统锁屏一致的本地凭据。自动解锁默认开启，可关闭。
+3. 在 AI 设置中登录 ChatGPT 或配置支持的模型服务；服务可能需要账号或付费计划。
+4. 创建日常、每周或单次任务，在同一个编辑窗口配置时间、动作和应用序列。
 
-手机重启后，第一次需要手动解锁。认证失败或结果不确定时，软件会暂停后续自动输入。日常运行无需连接电脑，也无需 ADB 或 Root。
+首次开机后需要本人解锁一次。认证失败或结果不明确会暂停后续自动凭据输入。日常运行无需电脑、ADB、Root、Shizuku 或单独中转服务器。默认英语，可切换简体中文。
+
+## 任务重叠时
+
+操作手机的任务串行执行。前一个还在运行时，后一个到点后等待；从自己的计划时间算起，超过 10 分钟未开始会跳过本次。多个任务同时积压时，当前按内部待执行列表处理，**尚未强制按计划时间排序**。任务彼此独立，不会自动要求前一项业务成功后才运行后一项。
 
 ## 隐私与操作确认
 
-锁屏凭据在手机内加密保存，密钥由 Android Keystore 保护。模型无法读取凭据或认证页面。执行 AI 任务时，普通应用的屏幕内容、所需截图和对话上下文会发送给你选择的模型服务。
+锁屏凭据由 Android Keystore 保护并加密存储在本机，不进入模型提示词、工具参数、聊天、截图或诊断报告。AI 需要的普通屏幕内容、截图及任务上下文会发送给用户选择的模型服务。保留 Android 安全截图限制。
 
-关闭“发送前确认”后，自己发起的任务和自己保存的定时任务可以直接提交普通界面操作。支付、删除、更改安全设置、直接发送短信和连接服务仍按各自规则确认。
+“发送前确认”关闭后，本地直接请求及用户保存、非第三方触发的任务中的 GUI 发送操作遵循该选择。支付、删除、安全设置、短信和其他连接工具仍按各自规则确认。详见[安全与隐私](docs/UNIFIED_SECURITY.md)。
 
-## 实测与构建
+## 已验证什么？
 
-S24+ 实测中，手机从锁屏状态开始，两项定时任务先后执行结束，中途无需手动确认或继续。该次目标服务拒绝了业务请求。最终构建的 JVM 测试有 1,618 项通过、3 项跳过、0 项失败。[测试摘要](docs/evidence/validation-summary.json) · [架构说明](docs/ARCHITECTURE.md)
+| 验证 | build17 的实际记录 |
+| --- | --- |
+| 构建与自动化检查 | Debug 构建成功；JVM 1695 通过、3 跳过、0 失败；Lint 0 错误、106 警告 |
+| 完整真实任务连点 | 原保存任务在真实微信页面运行一次，单次 `repeat_tap` 完成 60/60，随后检查状态并清理最近任务 |
+| 自动解锁跟进 | S24+ 上三轮真实锁定 → 自动解锁 → AI 打开计算器并读屏确认，3/3 通过 |
+| 数据和身份 | 原签名、包名、任务定义及无障碍启用状态保留 |
 
-Windows 构建使用 JDK 21 和 Android SDK Platform 37，在项目目录运行 `gradlew.bat testDebugUnitTest assembleDebug lintDebug`。包名为 `org.localwake.app`。最低安装版本为 Android 12，实机适配范围见本页开头。
+连点通过不等于新增预约成功：该轮开始时目标已处于使用中。三轮解锁为短时连续检查，不是整夜待机或多任务积压实测。其他实体机型尚未验证。[详细记录](docs/UNIFIED_TEST_REPORT.md) · [脱敏摘要](docs/evidence/build17-validation.json)
 
-采用 MIT 许可证，保留 joungminsung（OpenPhoneUse）、LocalWake contributors 和 OpenClaw Foundation 的版权声明。[许可证](LICENSE) · [第三方归属](THIRD_PARTY_NOTICES.md)
+## 构建与升级
+
+JDK 21、Android SDK Platform 37，targetSdk 36，minSdk 31。最低安装系统为 Android 12；连点使用的窗口截屏保护检查要求 Android 14 及以上，完整实机适配范围仍以页首为准。
+
+配置 Android SDK 后运行：
+
+```text
+gradlew.bat :app:testDebugUnitTest :app:assembleDebug :app:lintDebug
+```
+
+包名保持 `org.localwake.app`。源码不含原签名私钥；自行编译可能使用不同签名，不能保证覆盖现有安装。公开仓库保留测试和构建文件，排除账号数据、私有手机截图、原始日志、凭据及签名材料。公开回归样例中的地点、任务时间已替换为示例，应用代码与 build17 交付源码逐文件核对一致；Git 提交会统一文本换行格式。
+
+MIT：© 2026 joungminsung（OpenPhoneUse）、LocalWake contributors、OpenClaw Foundation（改编部分）。[许可证](LICENSE) · [第三方归属](THIRD_PARTY_NOTICES.md) · [架构](docs/ARCHITECTURE.md)

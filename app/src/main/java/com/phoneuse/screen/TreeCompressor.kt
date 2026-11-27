@@ -17,6 +17,10 @@ class CompressedScreen(
     val density: Float = ScreenSnapshot.DEFAULT_DENSITY,
     /** A shown vertical list can still scroll down: there is content the model has not seen. */
     val listContinues: Boolean = false,
+    /** This observation was redacted after capture failed. Screen actions need a fresh visible observation. */
+    val captureBlocked: Boolean = false,
+    /** The app exposes no node layout; system-bar text cannot identify this app's current page. */
+    val visualOnly: Boolean = false,
 ) {
     /** Where to touch element [index]: the centre of its bounds clipped to the display. */
     fun tapPoint(index: Int): Pair<Int, Int> {
@@ -48,6 +52,8 @@ object TreeCompressor {
         sb.append("app: ").append(s.packageName).append(" | screen ")
             .append(s.displayWidth).append('x').append(s.displayHeight)
         if (s.keyboardVisible) sb.append(" | keyboard open")
+        if (s.drawnRegion != null) sb.append("\nNo app controls in the accessibility tree. This is NOT a blank or unchanged page. " +
+            "Use the screenshot to read the app and locate controls; coordinates must use the display size above.")
         val continues = shown.any { it.node.scrollable && it.node.moreAfter && !it.node.horizontal }
         if (continues) sb.append(" | $LIST_CONTINUES")
         shown.forEachIndexed { idx, e ->
@@ -61,7 +67,7 @@ object TreeCompressor {
         if (omitted > 0) sb.append("\n... ($omitted more elements omitted)")
         return CompressedScreen(
             sb.toString(), elements, labels, s.packageName, fullLabels, s.displayWidth, s.displayHeight, s.density,
-            continues,
+            continues, visualOnly = s.drawnRegion != null,
         )
     }
 

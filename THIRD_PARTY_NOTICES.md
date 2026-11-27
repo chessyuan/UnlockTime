@@ -8,6 +8,8 @@ Copyright (c) 2026 joungminsung. MIT License: [full text](licenses/OpenPhoneUse-
 
 Source: https://github.com/joungminsung/OpenPhoneUse, fixed commit `c980cbf134a5d5eb1ec6cd0d097fcfabc45d6a73`. This is the main application, AgentLoop/Runner, tools, model clients, accessibility controller, overlays, UI, risk controls and routine infrastructure, with integration changes. The original README is preserved under `docs/provenance/`. No automatic update to upstream main is performed.
 
+UnlockTime 0.6.0 also adapts the screen-capture safety changes and tests included in the OpenPhoneUse v0.0.8 release at `96f3e72f1c3d86e1f5acdfd93e88a27cf24a47f3`. The same MIT notice applies. [Upstream change](https://github.com/joungminsung/OpenPhoneUse/pull/31)
+
 ## UnlockTime / LocalWake
 
 Copyright (c) 2026 LocalWake contributors. MIT License: [original build11 license](docs/provenance/UnlockTime-build11-LICENSE).

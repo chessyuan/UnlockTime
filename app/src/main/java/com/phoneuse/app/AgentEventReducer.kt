@@ -26,7 +26,8 @@ fun reduce(state: AgentUiState, event: AgentEvent): AgentUiState = when (event) 
     is AgentEvent.TextDelta -> state
     AgentEvent.TextReset -> state
     AgentEvent.DeviceUse -> state
-    is AgentEvent.Finished -> withLine(state.copy(phase = AgentPhase.IDLE, card = null), tr("Done: ${event.summary}", "완료: ${event.summary}"))
+    is AgentEvent.Finished -> withLine(state.copy(phase = AgentPhase.IDLE, card = null),
+        if (event.success) tr("Done: ${event.summary}", "완료: ${event.summary}") else event.summary)
     is AgentEvent.Failed -> withLine(state.copy(phase = AgentPhase.IDLE, card = null), tr("Failed: ${event.message}", "실패: ${event.message}"))
     AgentEvent.Cancelled -> withLine(state.copy(phase = AgentPhase.IDLE, card = null), tr("Stopped", "중단됨"))
 }

@@ -23,3 +23,14 @@ galaxy-test/
 
 # Local validation outputs; never commit private device data.
 artifacts/
+
+# Private local credentials and diagnostic data.
+.env.*
+!.env.example
+*.p12
+*.pfx
+*.pem
+*.key
+*.db
+*.db-wal
+*.db-shm

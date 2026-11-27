@@ -93,13 +93,13 @@ class ToolSpecsPinTest {
     private companion object {
         val BARE_NAMES = listOf(
             "tap", "long_press", "type_text", "scroll", "swipe", "pinch", "press_key", "open_app", "open_uri", "list_apps",
-            "screenshot", "wait", "batch", "delegate", "get_screen",
+            "screenshot", "wait", "batch", "delegate", "get_screen", "repeat_tap",
             "list_dir", "search_files", "file_info", "mkdir", "move_file", "move_files", "copy_file", "rename_file", "trash_files",
             "ask_user", "hand_to_user", "open_route", "show_card", "finish", "update_plan",
         )
         val FULL_NAMES = listOf(
             "tap", "long_press", "type_text", "scroll", "swipe", "pinch", "press_key", "open_app", "open_uri", "list_apps",
-            "screenshot", "wait", "batch", "delegate", "get_screen",
+            "screenshot", "wait", "batch", "delegate", "get_screen", "repeat_tap",
             "list_dir", "search_files", "file_info", "mkdir", "move_file", "move_files", "copy_file", "rename_file", "trash_files",
             "ask_user", "hand_to_user",
             "remember", "forget", "recall", "search_conversations",
@@ -111,7 +111,7 @@ class ToolSpecsPinTest {
             "flashlight", "set_volume", "media_control", "device_status", "recent_calls", "add_contact",
             "mcp__notion__search",
         )
-        const val BARE_HASH = "14ddf062771a5913479a589eb2a5457c9b895708b674fa45ead4c7734cf2af23"
-        const val FULL_HASH = "82ca87b9ee3c8ad01b6fb0645704965ef9e37b3a479a60b9e3e360a6d6be4741"
+        const val BARE_HASH = "ab4c7b7e6a5e1f14a9bc89b5e3270414b6bea9020fc06a892cbded2cbd93993a"
+        const val FULL_HASH = "cc61a414fb2a7ed9e70c67dd0564d8fabfd10f46ce09fe4e6b28cf80ccecddf5"
     }
 }

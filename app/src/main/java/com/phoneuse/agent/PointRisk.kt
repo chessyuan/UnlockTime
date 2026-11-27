@@ -29,10 +29,22 @@ internal object PointRisk {
     /** [RADIUS_DP] in px for a display of [density] px per dp (never the screen width: a Fold is wide, not dense). */
     fun radiusPx(density: Float): Double = RADIUS_DP * density.coerceAtLeast(1f)
 
-    fun judge(screen: CompressedScreen, x: Int, y: Int, swipe: Boolean = false): Verdict? {
+    /** A whole-page label mixes unrelated controls; it does not name a vertical scroll's effect. */
+    fun isPageContainer(screen: CompressedScreen, node: UiNode): Boolean {
+        val b = node.bounds
+        return !node.hasRange && !node.editable && b.right - b.left >= screen.displayWidth * 0.8 &&
+            b.bottom - b.top >= screen.displayHeight * 0.5 && screen.elements.values.count {
+                it !== node && it.windowId == node.windowId && it.isActionable && !it.bounds.isEmpty &&
+                    it.bounds != b && b.contains(it.bounds)
+            } >= 2
+    }
+
+    fun judge(screen: CompressedScreen, x: Int, y: Int, swipe: Boolean = false, pageScroll: Boolean = false): Verdict? {
         val containing = screen.elements.entries.filter { (_, n) -> n.bounds.contains(x, y) }
         val hit = containing.minByOrNull { (_, n) -> n.bounds.area }
-        val container = containing.filter { (_, n) -> n.clickable || n.longClickable }.minByOrNull { (_, n) -> n.bounds.area }
+            ?.takeUnless { pageScroll && isPageContainer(screen, it.value) }
+        val container = containing.filter { (_, n) -> (n.clickable || n.longClickable) &&
+            !(pageScroll && isPageContainer(screen, n)) }.minByOrNull { (_, n) -> n.bounds.area }
         val own = buildList {
             hit?.let { add(it.key) }
             container?.let { c ->

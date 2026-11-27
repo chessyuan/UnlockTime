@@ -24,7 +24,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-private class FakeModelClient(
+internal class FakeModelClient(
     script: List<Any>,
     val delayMs: Long = 0,
     val deltas: Map<Int, List<String>> = emptyMap(),
@@ -104,8 +104,24 @@ class AgentLoopTest {
         assertEquals(AgentEvent.Finished("완료"), events.last())
         // Each tap's step is sent, cancelled when the screen differs, then sent again with the new screen.
         assertEquals(5, model.calls)
-        val retried = model.inputs[2].last() as InputItem.UserText
+        val retried = model.inputs[2].filterIsInstance<InputItem.UserText>().last { it.text.startsWith("# Screen changed") }
         assertTrue(retried.text, retried.text.startsWith("# Screen changed while you were deciding"))
+    }
+
+    @Test fun restartedObservationMustReplaceThePreviousScreenshotToo() = runTest {
+        val changed = snap.copy(roots = listOf(button("New page", 100)))
+        var page = snap
+        val dev = FakeDeviceController(listOf(snap)).apply {
+            quickWindowMs = 1000
+            liveHash = { page = changed; screenshotResult = byteArrayOf(9, 8, 7); 42 }
+            snapshotHook = { page }
+        }
+        val model = FakeModelClient(listOf(tap(), finish()), delayMs = 500)
+        rig(model, dev = dev).loop.run(emptyList(), "t", observeFirst = true).toList()
+        val retried = model.inputs[2]
+        assertTrue(retried.filterIsInstance<InputItem.UserText>().any { it.text.contains("New page") })
+        org.junit.Assert.assertArrayEquals(byteArrayOf(9, 8, 7), java.util.Base64.getDecoder().decode(
+            retried.filterIsInstance<InputItem.UserImage>().single().base64))
     }
 
     @Test fun planUpdateRunsAlongWithOneActionAndExtraActionsAreSentBack() = runTest {
@@ -658,7 +674,7 @@ class AgentLoopTest {
         val model = FakeModelClient(listOf(tap(), turn(call("finish", """{"summary":"못 했어요","success":false}"""))))
         val events = rig(model).loop.run(emptyList(), "t", observeFirst = true).toList()
         assertTrue(events.none { it is AgentEvent.DeviceTaskDone })
-        assertEquals(AgentEvent.Finished("못 했어요"), events.last())
+        assertEquals(AgentEvent.Finished("못 했어요", success = false), events.last())
     }
 
     private fun field(hint: String, y: Int) = UiNode(

@@ -9,7 +9,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.Rect
+import android.graphics.Region
 import android.view.accessibility.AccessibilityWindowInfo
 import android.os.SystemClock
 import android.util.Log
@@ -36,6 +36,7 @@ import java.io.File
 open class PhoneUseAccessibilityService : AccessibilityService() {
 
     val idleWaiter = IdleWaiter { SystemClock.uptimeMillis() }
+    private val windowLayout = PageWindowLayout<Region>()
     private var debugReceiver: BroadcastReceiver? = null
     private val probes by lazy { DebugProbes(this) }
 
@@ -116,44 +117,66 @@ open class PhoneUseAccessibilityService : AccessibilityService() {
         if (AndroidDeviceAccess.coordinator.owner.value in setOf(DeviceOwner.UNLOCK, DeviceOwner.CREDENTIAL_EDIT, DeviceOwner.MIGRATION)) return
         val e = event ?: return
         val type = e.eventType
-        if (type == AccessibilityEvent.TYPE_WINDOWS_CHANGED || type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+        val wasIgnored = e.windowId in idleWaiter.ignoredWindows
+        val windowsChanged = if (type == AccessibilityEvent.TYPE_WINDOWS_CHANGED || type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             refreshIgnoredWindows()
+        } else false
+        if (type == AccessibilityEvent.TYPE_WINDOWS_CHANGED && !windowsChanged) {
+            val changes = e.windowChanges
+            // After a removal its id is no longer in the current list of overlay/keyboard/bar windows.
+            if (wasIgnored && changes and AccessibilityEvent.WINDOWS_CHANGE_REMOVED != 0) return
+            if (changes != 0 && changes and WINDOW_FOCUS_CHANGES.inv() == 0) return
         }
         // IdleWaiter keeps only the event types that mean the app's screen changed.
-        idleWaiter.onEvent(e.packageName, type, e.windowId, e.className)
+        idleWaiter.onEvent(e.packageName, type, e.windowId, e.className, windowsChanged)
     }
 
-    /**
-     * Marks the windows whose events never mean the app's screen changed: the keyboard, our overlay, and small
-     * system windows (status bar with its clock and speed meter, navigation bar). A large system window (the
-     * notification shade pulled down) still counts.
-     */
-    private fun refreshIgnoredWindows() {
+    /** Keyboard suggestions and system bars are noisy; moving either window can still cover the tap point. */
+    private fun refreshIgnoredWindows(): Boolean {
+        val current = pageWindows() ?: return true
+        return recordLayout(current)
+    }
+
+    /** Main thread. Check existing coverage too, even if no window event has reached the service yet. */
+    internal fun canTapAppAt(x: Int, y: Int): Boolean {
+        val current = pageWindows() ?: return false
+        if (recordLayout(current)) idleWaiter.onEvent(eventType = IdleWaiter.TYPE_WINDOWS_CHANGED, externalWindowsChanged = true)
+        return windowLayout.appExposedAt(current) { it.contains(x, y) }
+    }
+
+    private fun recordLayout(current: List<PageWindow<Region>>): Boolean {
+        val changed = windowLayout.update(current)
+        idleWaiter.ignoredWindows = windowLayout.ignoredContentWindows
+        return changed
+    }
+
+    private fun pageWindows(): List<PageWindow<Region>>? {
         val ws = try {
             windows
         } catch (_: RuntimeException) {
-            return
+            return null
         }
         val m = resources.displayMetrics
         val screenArea = m.widthPixels.toLong() * m.heightPixels
-        val r = Rect()
-        val ignored = HashSet<Int>()
-        for (w in ws) {
-            val noise = when (w.type) {
-                AccessibilityWindowInfo.TYPE_INPUT_METHOD,
-                AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY,
+        val owned = overlay?.accessibilityWindowIds().orEmpty()
+        return ws.map { w ->
+            val region = Region().also { w.getRegionInScreen(it) }
+            val role = when (w.type) {
+                AccessibilityWindowInfo.TYPE_APPLICATION -> PageWindowRole.APPLICATION
+                AccessibilityWindowInfo.TYPE_INPUT_METHOD -> PageWindowRole.KEYBOARD
+                AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY ->
+                    if (w.id in owned) PageWindowRole.OWN_OVERLAY else PageWindowRole.OTHER
                 AccessibilityWindowInfo.TYPE_MAGNIFICATION_OVERLAY,
-                AccessibilityWindowInfo.TYPE_SPLIT_SCREEN_DIVIDER,
-                -> true
+                AccessibilityWindowInfo.TYPE_SPLIT_SCREEN_DIVIDER -> PageWindowRole.SYSTEM_DECORATION
                 AccessibilityWindowInfo.TYPE_SYSTEM -> {
-                    w.getBoundsInScreen(r)
-                    r.width().toLong() * r.height() * SMALL_SYSTEM_WINDOW < screenArea
+                    val r = region.bounds
+                    if (r.width().toLong() * r.height() * SMALL_SYSTEM_WINDOW < screenArea) PageWindowRole.SYSTEM_DECORATION
+                    else PageWindowRole.OTHER
                 }
-                else -> false
+                else -> PageWindowRole.OTHER
             }
-            if (noise) ignored.add(w.id)
+            PageWindow(w.id, role, region)
         }
-        idleWaiter.ignoredWindows = ignored
     }
 
     override fun onInterrupt() = Unit
@@ -403,6 +426,8 @@ open class PhoneUseAccessibilityService : AccessibilityService() {
 
         /** A system window under 1/this of the screen is a bar, not a panel the user looks at. */
         private const val SMALL_SYSTEM_WINDOW = 4
+        private const val WINDOW_FOCUS_CHANGES = AccessibilityEvent.WINDOWS_CHANGE_FOCUSED or
+            AccessibilityEvent.WINDOWS_CHANGE_ACCESSIBILITY_FOCUSED
 
         /** Times a connection came up (onServiceConnected on any instance); a change means a fresh token. */
         val connections = java.util.concurrent.atomic.AtomicInteger(0)

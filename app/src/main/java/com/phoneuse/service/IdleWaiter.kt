@@ -2,6 +2,7 @@ package com.phoneuse.service
 
 import com.phoneuse.screen.TreeCompressor
 import kotlinx.coroutines.delay
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * How a settle wait ended (logged with the step timings). ANIMATED: the app keeps animating (a map, a player)
@@ -87,6 +88,27 @@ class IdleWaiter(private val clock: () -> Long) {
     /** When the latest counted UI event came (clock ms), or [Long.MIN_VALUE] when none has. */
     val lastEventAt: Long get() = lastEvent
 
+    private var pageVersion = nextVersion.incrementAndGet()
+    private var leaseEpoch: Long? = null
+    private var voiceSession = 0
+
+    /** Old observations also expire when ownership, service instance or user voice session changes. */
+    @Synchronized
+    internal fun pageChangeVersion(epoch: Long, interruptions: Int): Long {
+        if (leaseEpoch != epoch || voiceSession != interruptions) {
+            leaseEpoch = epoch
+            voiceSession = interruptions
+            pageVersion = nextVersion.incrementAndGet()
+        }
+        return pageVersion
+    }
+
+    @Synchronized
+    private fun recordChange(now: Long) {
+        lastEvent = now
+        pageVersion = nextVersion.incrementAndGet()
+    }
+
     /** Window ids whose events never count (system bars, keyboard, our overlay); kept up to date by the service. */
     @Volatile
     var ignoredWindows: Set<Int> = emptySet()
@@ -101,8 +123,8 @@ class IdleWaiter(private val clock: () -> Long) {
 
     private class Streak(val start: Long, var last: Long)
 
-    /** Per event source (window, class, type): since when it has fired without a gap. Guarded by itself. */
-    private val streaks = HashMap<Triple<Int, String?, Int>, Streak>()
+    /** Content-change streak per source. A new package can reuse a window or view class. */
+    private val streaks = HashMap<Triple<String?, Int, String?>, Streak>()
 
     @Volatile
     private var lastAnimated = Long.MIN_VALUE
@@ -118,32 +140,37 @@ class IdleWaiter(private val clock: () -> Long) {
         eventType: Int = TYPE_WINDOW_CONTENT_CHANGED,
         windowId: Int = -1,
         className: CharSequence? = null,
+        externalWindowsChanged: Boolean = false,
     ) {
         if (eventType and CHANGE_TYPES == 0) return
-        if (packageName?.toString() == OWN_PACKAGE) return
-        if (windowId != -1 && windowId in ignoredWindows) return
         val now = clock()
+        if (externalWindowsChanged) {
+            recordChange(now)
+            return
+        }
+        val pkg = packageName?.toString()
+        if (pkg == OWN_PACKAGE || windowId in ignoredWindows) return
         val own = ownChangeAt
-        if (eventType == TYPE_WINDOWS_CHANGED && packageName == null &&
+        if (eventType == TYPE_WINDOWS_CHANGED && windowId == -1 && pkg == null &&
             own != Long.MIN_VALUE && now - own in 0..OWN_CHANGE_MS
         ) return
         // A new window or page always counts, and so does scrolling (a fling ends, and the list must have stopped
         // before it is read); content changes may be an animation.
-        if (eventType != TYPE_WINDOW_CONTENT_CHANGED) {
-            lastEvent = now
+        if (eventType != TYPE_WINDOW_CONTENT_CHANGED && eventType != TYPE_VIEW_TEXT_CHANGED) {
+            recordChange(now)
             return
         }
         val cls = className?.toString()
-        if (TreeCompressor.isSurface(cls) || animating(windowId, cls, eventType, now)) {
+        if (TreeCompressor.isSurface(cls) || animating(pkg, windowId, cls, now)) {
             lastAnimated = now
             return
         }
-        lastEvent = now
+        recordChange(now)
     }
 
     /** Updates the streak of this source; true once it has fired with no gap over [STREAK_GAP_MS] for long. */
-    private fun animating(windowId: Int, cls: String?, type: Int, now: Long): Boolean = synchronized(streaks) {
-        val key = Triple(windowId, cls, type)
+    private fun animating(pkg: String?, windowId: Int, cls: String?, now: Long): Boolean = synchronized(streaks) {
+        val key = Triple(pkg, windowId, cls)
         val s = streaks[key]
         if (s == null || now - s.last > STREAK_GAP_MS) {
             if (streaks.size >= MAX_STREAKS) streaks.entries.removeAll { now - it.value.last > STREAK_GAP_MS }
@@ -220,6 +247,7 @@ class IdleWaiter(private val clock: () -> Long) {
     private fun animatingSince(t: Long): Boolean = lastAnimated.let { it != Long.MIN_VALUE && it >= t }
 
     companion object {
+        private val nextVersion = AtomicLong()
         private const val POLL_MS = 30L
         private val OWN_PACKAGE = com.phoneuse.BuildConfig.APPLICATION_ID
 
@@ -237,11 +265,12 @@ class IdleWaiter(private val clock: () -> Long) {
         // AccessibilityEvent types (the values are part of the platform API).
         const val TYPE_VIEW_CLICKED = 0x1
         const val TYPE_VIEW_FOCUSED = 0x8
+        const val TYPE_VIEW_TEXT_CHANGED = 0x10
         const val TYPE_WINDOW_STATE_CHANGED = 0x20
         const val TYPE_WINDOW_CONTENT_CHANGED = 0x800
         const val TYPE_VIEW_SCROLLED = 0x1000
         const val TYPE_WINDOWS_CHANGED = 0x400000
         private const val CHANGE_TYPES =
-            TYPE_WINDOW_STATE_CHANGED or TYPE_WINDOW_CONTENT_CHANGED or TYPE_VIEW_SCROLLED or TYPE_WINDOWS_CHANGED
+            TYPE_WINDOW_STATE_CHANGED or TYPE_WINDOW_CONTENT_CHANGED or TYPE_VIEW_TEXT_CHANGED or TYPE_VIEW_SCROLLED or TYPE_WINDOWS_CHANGED
     }
 }

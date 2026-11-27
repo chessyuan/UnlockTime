@@ -1,6 +1,6 @@
 # Unified screen-access entry-point inventory
 
-The symbols below identify screen-access paths in the integrated source reviewed on 2026-11-16. See the [test summary](evidence/validation-summary.json) for runtime coverage.
+Source snapshot: 2026-11-16, `UnlockTime-Unified` working tree. This is a static inventory of the integrated implementation, not a device trace. Line numbers may move; the named symbols identify the reviewed sites. Review results and limitations are recorded in [UNIFIED_SECURITY_REVIEW.md](UNIFIED_SECURITY_REVIEW.md).
 
 ## Enumeration method and boundary
 

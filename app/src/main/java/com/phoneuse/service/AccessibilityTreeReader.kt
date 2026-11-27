@@ -11,6 +11,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction
 import android.view.accessibility.AccessibilityWindowInfo
 import com.phoneuse.screen.Bounds
+import com.phoneuse.screen.AppWindowRegion
 import com.phoneuse.screen.Occlusion
 import com.phoneuse.screen.ScreenSnapshot
 import com.phoneuse.screen.UiNode
@@ -38,6 +39,7 @@ class AccessibilityTreeReader(private val service: PhoneUseAccessibilityService)
         // What each window covers, for the windows below it.
         val covers = windows.map { w -> w.layer to (if (coversBelow(w)) regionRects(w) else emptyList()) }
         val appRoots = ArrayList<UiNode>()
+        val appRegions = ArrayList<AppWindowRegion>()
         val otherRoots = ArrayList<UiNode>()
         val systemIds = HashSet<Int>()
         var activePackage: String? = null
@@ -69,6 +71,16 @@ class AccessibilityTreeReader(private val service: PhoneUseAccessibilityService)
             // App windows first (keeping their order), then system windows such as the status bar.
             if (isApp) {
                 appRoots.add(node)
+                // Use the actual window region, subtracting every window above it. Do not invent
+                // accessibility node bounds when an app deliberately exposes an empty root.
+                val visible = Region()
+                regionRects(w).forEach { visible.op(Rect(it.left, it.top, it.right, it.bottom), Region.Op.UNION) }
+                visible.op(Rect(0, 0, displayWidth, displayHeight), Region.Op.INTERSECT)
+                above.forEach { visible.op(Rect(it.left, it.top, it.right, it.bottom), Region.Op.DIFFERENCE) }
+                val parts = RegionIterator(visible)
+                val part = Rect()
+                while (parts.next(part)) appRegions += AppWindowRegion(w.id, requireNotNull(pkg),
+                    Bounds(part.left, part.top, part.right, part.bottom))
             } else {
                 otherRoots.add(node)
                 systemIds.add(w.id)
@@ -88,6 +100,7 @@ class AccessibilityTreeReader(private val service: PhoneUseAccessibilityService)
             ownAppInFront = false,
             activeIsSystem = activeIsSystem,
             truncated = budget.truncated,
+            appWindowRegions = appRegions,
         )
     }
 

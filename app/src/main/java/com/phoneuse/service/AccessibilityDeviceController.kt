@@ -1,6 +1,8 @@
 package com.phoneuse.service
 
 import com.phoneuse.unified.AndroidDeviceAccess
+import com.phoneuse.unified.DeviceInputFence
+import com.phoneuse.unified.NormalSurfaceIncompleteException
 import com.phoneuse.unified.DeviceSessionLease
 import com.phoneuse.unified.DeviceSessionRevokedException
 import com.phoneuse.unified.DeviceRevocationReason
@@ -14,6 +16,7 @@ import android.graphics.Path
 import android.graphics.Rect
 import android.media.AudioManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -22,12 +25,15 @@ import android.view.WindowInsets
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction
+import android.view.accessibility.AccessibilityWindowInfo
 import com.phoneuse.agent.QuickSettle
 import com.phoneuse.agent.AppInfo
 import com.phoneuse.agent.DeviceController
 import com.phoneuse.agent.GlobalAction
 import com.phoneuse.agent.ScreenMark
 import com.phoneuse.agent.ServiceUnavailableException
+import com.phoneuse.agent.TapSequenceResult
+import com.phoneuse.assist.VoiceBridge
 import com.phoneuse.screen.ScreenSnapshot
 import com.phoneuse.screen.ScreenBusy
 import com.phoneuse.screen.TreeCompressor
@@ -35,6 +41,7 @@ import com.phoneuse.agent.SettleKind
 import android.os.SystemClock
 import com.phoneuse.screen.UiNode
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -138,19 +145,24 @@ class AccessibilityDeviceController(
     /** The last few reads handed out by [snapshot], newest first: the screens the model was shown. */
     private val shown = ArrayDeque<Read>()
 
-    override suspend fun snapshot(): ScreenSnapshot {
+    override suspend fun snapshot(): ScreenSnapshot = snapshot(fresh = false)
+
+    override suspend fun freshSnapshot(): ScreenSnapshot = snapshot(fresh = true)
+
+    private suspend fun snapshot(fresh: Boolean): ScreenSnapshot {
         AndroidDeviceAccess.ensureScreenAccess()
-        return AndroidDeviceAccess.readNormalSurface { snapshotWhenReady() }
+        return AndroidDeviceAccess.readNormalSurface { snapshotWhenReady(fresh) }
     }
 
-    private suspend fun snapshotWhenReady(): ScreenSnapshot {
+    private suspend fun snapshotWhenReady(fresh: Boolean): ScreenSnapshot {
         val s = readService()
         val kept = settledSample
         settledSample = null
         val lastEvent = s.idleWaiter.lastEventAt
         // Right after a settle that gave up or saw no change, a read the settle started is as good as a new one.
         val notBefore = if (gaveUp()) minStart else lastEvent
-        val read = if (kept != null && reusable(kept, lastEvent)) kept else read(s, notBefore = notBefore, whole = true)
+        val read = if (!fresh && kept != null && reusable(kept, lastEvent)) kept
+            else read(s, notBefore = notBefore, whole = true, fresh = fresh)
         // The settle's verdict covers only the read right after it.
         lastSettled = null
         AndroidDeviceAccess.validateNormalSurface(read.lease)
@@ -196,20 +208,22 @@ class AccessibilityDeviceController(
         deadline: Long = SystemClock.uptimeMillis() + READ_BUDGET_MS,
         notBefore: Long = Long.MIN_VALUE,
         whole: Boolean = false,
+        fresh: Boolean = false,
     ): Read = AndroidDeviceAccess.readNormalSurface(
         timeoutMs = (deadline - SystemClock.uptimeMillis()).coerceIn(0, SURFACE_WAIT_MS),
-    ) { readWhenReady(s, deadline, notBefore, whole) }
+    ) { readWhenReady(s, deadline, notBefore, whole, fresh) }
 
     private suspend fun readWhenReady(
         s: PhoneUseAccessibilityService,
         deadline: Long,
         notBefore: Long,
         whole: Boolean,
+        fresh: Boolean,
     ): Read {
         val lease = AndroidDeviceAccess.requireAccess()
         val f = synchronized(readLock) {
             val cur = inFlight
-            if (cur != null && cur.lease === lease && cur.result.isActive && cur.startedAt >= notBefore) {
+            if (!fresh && cur != null && cur.lease === lease && cur.result.isActive && cur.startedAt >= notBefore) {
                 cur
             } else {
                 if (cur != null && cur.result.isActive) cur.budget.stop()
@@ -250,25 +264,28 @@ class AccessibilityDeviceController(
 
     override suspend fun screenshot(): ByteArray? = markedScreenshot(emptyList())
 
-    override suspend fun markedScreenshot(marks: List<ScreenMark>): ByteArray? {
+    override suspend fun canCaptureScreen(): Boolean {
         AndroidDeviceAccess.ensureScreenAccess()
-        return AndroidDeviceAccess.readNormalSurface(discard = { bytes: ByteArray? -> bytes?.fill(0) }) {
-            val s = readService()
-            val run: suspend () -> ByteArray? = { captureJpeg(s, marks) }
-            val o = overlay
-            if (o != null) o.hiddenForCapture(run) else run()
+        return AndroidDeviceAccess.readNormalSurface {
+            withCaptureOverlay { capture(it, copyPixels = false) === ShotResult.Allowed }
         }
     }
 
-    private suspend fun captureJpeg(s: PhoneUseAccessibilityService, marks: List<ScreenMark>): ByteArray? {
-        var result = takeScreenshotOnce(s)
-        if (result is ShotResult.Error && result.code ==
-            AccessibilityService.ERROR_TAKE_SCREENSHOT_INTERVAL_TIME_SHORT
-        ) {
-            delay(350)
-            result = takeScreenshotOnce(s)
+    override suspend fun markedScreenshot(marks: List<ScreenMark>): ByteArray? {
+        AndroidDeviceAccess.ensureScreenAccess()
+        return AndroidDeviceAccess.readNormalSurface(discard = { bytes: ByteArray? -> bytes?.fill(0) }) {
+            withCaptureOverlay { captureJpeg(it, marks) }
         }
-        val bitmap = (result as? ShotResult.Ok)?.bitmap ?: return null
+    }
+
+    private suspend fun <T> withCaptureOverlay(block: suspend (PhoneUseAccessibilityService) -> T): T {
+        val s = readService()
+        val o = overlay
+        return if (o != null) o.hiddenForCapture { block(s) } else block(s)
+    }
+
+    private suspend fun captureJpeg(s: PhoneUseAccessibilityService, marks: List<ScreenMark>): ByteArray? {
+        val bitmap = (capture(s, copyPixels = true) as? ShotResult.Ok)?.bitmap ?: return null
         try { AndroidDeviceAccess.requireAccess() } catch (e: Exception) { bitmap.recycle(); throw e }
         val longest = maxOf(bitmap.width, bitmap.height)
         val scaled = if (longest > MAX_EDGE) {
@@ -293,64 +310,149 @@ class AccessibilityDeviceController(
 
     private sealed interface ShotResult {
         class Ok(val bitmap: Bitmap) : ShotResult
+        data object Allowed : ShotResult
         class Error(val code: Int) : ShotResult
     }
 
-    /** The GPU readback and copy run off the main thread, so the overlay and event delivery do not stall. */
-    private suspend fun takeScreenshotOnce(s: PhoneUseAccessibilityService): ShotResult =
-        withTimeoutOrNull(SCREENSHOT_TIMEOUT_MS) { takeScreenshotUnbounded(s) } ?: ShotResult.Error(-2)
+    private suspend fun capture(s: PhoneUseAccessibilityService, copyPixels: Boolean): ShotResult {
+        if (Build.VERSION.SDK_INT < 34) return captureWithRetry(s, copyPixels, windowId = null)
+        // A whole-display buffer can succeed with a FLAG_SECURE app painted black. Check the actual app
+        // windows, including an unfocused split-screen pane. No per-window pixels leave the callback.
+        val windows = applicationWindowIds(s)
+        if (windows.isEmpty()) return ShotResult.Error(AccessibilityService.ERROR_TAKE_SCREENSHOT_INVALID_WINDOW)
+        for (id in windows) {
+            val allowed = captureWithRetry(s, copyPixels = false, windowId = id)
+            if (allowed !== ShotResult.Allowed) return allowed
+        }
+        val display = captureWithRetry(s, copyPixels, windowId = null)
+        try {
+            if (windows == applicationWindowIds(s)) return display
+        } catch (failure: Throwable) {
+            (display as? ShotResult.Ok)?.bitmap?.recycle()
+            throw failure
+        }
+        (display as? ShotResult.Ok)?.bitmap?.recycle()
+        return ShotResult.Error(AccessibilityService.ERROR_TAKE_SCREENSHOT_INVALID_WINDOW)
+    }
 
-    private suspend fun takeScreenshotUnbounded(s: PhoneUseAccessibilityService): ShotResult =
+    private fun applicationWindowIds(s: PhoneUseAccessibilityService): List<Int> =
+        s.windows.filter { it.type == AccessibilityWindowInfo.TYPE_APPLICATION }.map { it.id }
+
+    private suspend fun captureWithRetry(s: PhoneUseAccessibilityService, copyPixels: Boolean, windowId: Int?): ShotResult {
+        val first = takeScreenshotOnce(s, copyPixels, windowId)
+        if (first !is ShotResult.Error || first.code != AccessibilityService.ERROR_TAKE_SCREENSHOT_INTERVAL_TIME_SHORT) return first
+        delay(350)
+        return takeScreenshotOnce(s, copyPixels, windowId)
+    }
+
+    /** The GPU readback and copy run off the main thread, so the overlay and event delivery do not stall. */
+    private suspend fun takeScreenshotOnce(s: PhoneUseAccessibilityService, copyPixels: Boolean, windowId: Int?): ShotResult =
+        withTimeoutOrNull(SCREENSHOT_TIMEOUT_MS) { takeScreenshotUnbounded(s, copyPixels, windowId) } ?: ShotResult.Error(-2)
+
+    private suspend fun takeScreenshotUnbounded(s: PhoneUseAccessibilityService, copyPixels: Boolean, windowId: Int?): ShotResult =
         suspendCancellableCoroutine { cont ->
             val lease = AndroidDeviceAccess.requireAccess()
-            s.takeScreenshot(
-                Display.DEFAULT_DISPLAY,
-                SHOT_EXECUTOR,
-                object : AccessibilityService.TakeScreenshotCallback {
-                    override fun onSuccess(screenshot: AccessibilityService.ScreenshotResult) {
-                        val buffer = screenshot.hardwareBuffer
-                        if (!cont.isActive) {
-                            buffer.close()
-                            return
-                        }
-                        try { AndroidDeviceAccess.validateNormalSurface(lease) } catch (failure: Exception) {
-                            buffer.close()
-                            cont.resumeWithException(failure)
-                            return
-                        }
-                        val r: ShotResult = try {
-                            val hw = Bitmap.wrapHardwareBuffer(buffer, screenshot.colorSpace)
-                            val copy = hw?.copy(Bitmap.Config.ARGB_8888, true)
-                            hw?.recycle()
-                            if (copy != null) ShotResult.Ok(copy) else ShotResult.Error(-1)
-                        } catch (_: Throwable) {
-                            ShotResult.Error(-1)
-                        } finally {
-                            buffer.close()
-                        }
-                        if (!cont.isActive) {
-                            (r as? ShotResult.Ok)?.bitmap?.recycle()
-                            return
-                        }
-                        try { AndroidDeviceAccess.validateNormalSurface(lease) } catch (failure: Exception) {
-                            (r as? ShotResult.Ok)?.bitmap?.recycle()
-                            cont.resumeWithException(failure)
-                            return
-                        }
-                        cont.resume(r)
+            val callback = object : AccessibilityService.TakeScreenshotCallback {
+                override fun onSuccess(screenshot: AccessibilityService.ScreenshotResult) {
+                    val buffer = screenshot.hardwareBuffer
+                    if (!cont.isActive) {
+                        buffer.close()
+                        return
                     }
+                    try { AndroidDeviceAccess.validateNormalSurface(lease) } catch (failure: Exception) {
+                        buffer.close()
+                        cont.resumeWithException(failure)
+                        return
+                    }
+                    if (!copyPixels) {
+                        buffer.close()
+                        if (cont.isActive) cont.resume(ShotResult.Allowed)
+                        return
+                    }
+                    val r: ShotResult = try {
+                        val hw = Bitmap.wrapHardwareBuffer(buffer, screenshot.colorSpace)
+                        val copy = hw?.copy(Bitmap.Config.ARGB_8888, true)
+                        hw?.recycle()
+                        if (copy != null) ShotResult.Ok(copy) else ShotResult.Error(-1)
+                    } catch (_: Throwable) {
+                        ShotResult.Error(-1)
+                    } finally {
+                        buffer.close()
+                    }
+                    if (!cont.isActive) {
+                        (r as? ShotResult.Ok)?.bitmap?.recycle()
+                        return
+                    }
+                    try { AndroidDeviceAccess.validateNormalSurface(lease) } catch (failure: Exception) {
+                        (r as? ShotResult.Ok)?.bitmap?.recycle()
+                        cont.resumeWithException(failure)
+                        return
+                    }
+                    cont.resume(r) { _, undelivered, _ -> (undelivered as? ShotResult.Ok)?.bitmap?.recycle() }
+                }
 
-                    override fun onFailure(errorCode: Int) {
-                        if (cont.isActive) cont.resume(ShotResult.Error(errorCode))
-                    }
-                },
-            )
+                override fun onFailure(errorCode: Int) {
+                    if (cont.isActive) cont.resume(ShotResult.Error(errorCode))
+                }
+            }
+            if (windowId == null) {
+                s.takeScreenshot(Display.DEFAULT_DISPLAY, SHOT_EXECUTOR, callback)
+            } else if (Build.VERSION.SDK_INT >= 34) {
+                s.takeScreenshotOfWindow(windowId, SHOT_EXECUTOR, callback)
+            } else cont.resume(ShotResult.Error(-1))
         }
 
     override suspend fun tap(x: Int, y: Int): Boolean {
         AndroidDeviceAccess.ensureScreenAccess()
         overlay?.showTouch(x, y)
         return passThrough(x, y) { dispatch(point(x, y, TAP_MS), TAP_MS) }
+    }
+
+    override fun pageChangeVersion(): Long? {
+        if (Build.VERSION.SDK_INT < 34) return null // No reliable per-window secure-content check for a tap group.
+        val lease = AndroidDeviceAccess.requireSession()
+        return PhoneUseAccessibilityService.instance?.idleWaiter?.pageChangeVersion(lease.epoch, VoiceBridge.sessions)
+    }
+
+    override suspend fun tapSequence(x: Int, y: Int, count: Int, intervalMs: Long, expectedVersion: Long?): TapSequenceResult {
+        if (Build.VERSION.SDK_INT < 34) return TapSequenceResult(0, "MONITOR_UNAVAILABLE")
+        if (count !in 1..MAX_TAPS_PER_CHUNK || intervalMs <= 0) return TapSequenceResult(0, "INVALID_ARGUMENT")
+        val lease = AndroidDeviceAccess.ensureScreenAccess()
+        val s = readService()
+        val display = displayBounds(s)
+        if (x !in 0 until display.width() || y !in 0 until display.height()) return TapSequenceResult(0, "OUT_OF_BOUNDS")
+        val exposed = withContext(Dispatchers.Main.immediate) {
+            AndroidDeviceAccess.validate(lease)
+            s.canTapAppAt(x, y)
+        }
+        if (!exposed) return TapSequenceResult(0, "TARGET_COVERED")
+        val voiceSession = VoiceBridge.sessions
+        fun stopReason(): String? = when {
+            VoiceBridge.listening.value || voiceSession != VoiceBridge.sessions -> "INTERRUPTED"
+            expectedVersion != null && s.idleWaiter.pageChangeVersion(lease.epoch, voiceSession) != expectedVersion -> "PAGE_CHANGED"
+            else -> null
+        }
+        val gesture = point(x, y, TAP_MS)
+        var nextTapAt: Long? = null
+        val result = runTapGestureChunk(count, intervalMs, SystemClock::uptimeMillis, ::stopReason,
+            passThrough = { taps -> passThrough(x, y, taps) },
+        ) {
+            try {
+                val dispatched = dispatchChecked(s, lease, gesture, TAP_MS, ::stopReason)
+                if (dispatched is GestureDispatch.Completed) {
+                    val startBound = dispatched.completedAt - TAP_MS
+                    nextTapAt = if (intervalMs > Long.MAX_VALUE - startBound) Long.MAX_VALUE else startBound + intervalMs
+                    dispatched.copy(durationMs = TAP_MS)
+                } else dispatched
+            } catch (cancel: CancellationException) {
+                throw cancel
+            } catch (_: NormalSurfaceIncompleteException) {
+                GestureDispatch.Stopped("SURFACE_UNAVAILABLE")
+            } catch (_: RuntimeException) {
+                GestureDispatch.Stopped("DISPATCH_FAILED")
+            }
+        }
+        return result.copy(nextTapAtUptimeMs = nextTapAt)
     }
 
     override suspend fun longPress(x: Int, y: Int): Boolean {
@@ -448,44 +550,68 @@ class AccessibilityDeviceController(
      */
     private suspend fun dispatch(gesture: GestureDescription, ms: Long): Boolean {
         val s = service()
-        val limit = ms.coerceIn(MIN_GESTURE_MS, MAX_GESTURE_MS) + GESTURE_SLACK_MS
-        return withTimeoutOrNull(limit) { dispatchUnbounded(s, gesture) } ?: false
+        val lease = AndroidDeviceAccess.requireSession()
+        return dispatchChecked(s, lease, gesture, ms) { null } is GestureDispatch.Completed
     }
 
-    private suspend fun dispatchUnbounded(s: PhoneUseAccessibilityService, gesture: GestureDescription): Boolean {
-        if (!com.phoneuse.unified.DeviceInputFence.shared.awaitIdle()) return false
+    private suspend fun dispatchChecked(
+        s: PhoneUseAccessibilityService,
+        lease: DeviceSessionLease,
+        gesture: GestureDescription,
+        ms: Long,
+        stopReason: () -> String?,
+    ): GestureDispatch {
+        val limit = ms.coerceIn(MIN_GESTURE_MS, MAX_GESTURE_MS) + GESTURE_SLACK_MS
+        return withTimeoutOrNull(limit) {
+            if (!DeviceInputFence.shared.awaitIdle()) return@withTimeoutOrNull GestureDispatch.Stopped("INPUT_BUSY")
+            // Accessibility events and gesture submission now share the service main looper.
+            withContext(Dispatchers.Main.immediate) { submitGesture(s, lease, gesture, stopReason) }
+        } ?: GestureDispatch.Stopped("DISPATCH_TIMEOUT")
+    }
+
+    private suspend fun submitGesture(
+        s: PhoneUseAccessibilityService,
+        lease: DeviceSessionLease,
+        gesture: GestureDescription,
+        stopReason: () -> String?,
+    ): GestureDispatch {
         return suspendCancellableCoroutine { cont ->
             if (!cont.isActive) return@suspendCancellableCoroutine
-            val lease = AndroidDeviceAccess.requireAccess()
-            val input = AndroidDeviceAccess.coordinator.publish(lease) {
-                com.phoneuse.unified.DeviceInputFence.shared.tryBegin()
-            }
+            // Keep the normal-window check for every physical gesture. It reads window ownership only.
+            AndroidDeviceAccess.validateNormalSurface(lease)
+            val input = AndroidDeviceAccess.coordinator.publish(lease) { DeviceInputFence.shared.tryBegin() }
             if (input == null) {
-                cont.resume(false)
+                cont.resume(GestureDispatch.Stopped("INPUT_BUSY"))
                 return@suspendCancellableCoroutine
             }
-            val accepted = try { s.dispatchGesture(
-                gesture,
-                object : AccessibilityService.GestureResultCallback() {
-                    override fun onCompleted(gestureDescription: GestureDescription?) {
-                        input.complete()
-                        if (cont.isActive && runCatching { AndroidDeviceAccess.validateNormalSurface(lease) }.isSuccess) cont.resume(true)
-                        else cont.cancel(DeviceSessionRevokedException(DeviceRevocationReason.INVALID_SESSION))
-                    }
+            val callback = object : AccessibilityService.GestureResultCallback() {
+                override fun onCompleted(gestureDescription: GestureDescription?) {
+                    val completedAt = SystemClock.uptimeMillis()
+                    input.complete()
+                    if (!cont.isActive) return
+                    if (runCatching { AndroidDeviceAccess.validateNormalSurface(lease) }.isSuccess) {
+                        cont.resume(GestureDispatch.Completed(completedAt))
+                    } else cont.cancel(DeviceSessionRevokedException(DeviceRevocationReason.INVALID_SESSION))
+                }
 
-                    override fun onCancelled(gestureDescription: GestureDescription?) {
-                        input.complete()
-                        if (cont.isActive) cont.resume(false)
-                    }
-                },
-                mainHandler,
-            ) } catch (failure: Throwable) {
+                override fun onCancelled(gestureDescription: GestureDescription?) {
+                    input.complete()
+                    if (cont.isActive) cont.resume(GestureDispatch.Stopped("GESTURE_CANCELLED"))
+                }
+            }
+            try {
+                AndroidDeviceAccess.coordinator.requireValid(lease)
+                val stop = stopReason()
+                if (!cont.isActive || stop != null) {
+                    input.complete()
+                    if (cont.isActive && stop != null) cont.resume(GestureDispatch.Stopped(stop))
+                } else if (!s.dispatchGesture(gesture, callback, mainHandler)) {
+                    input.complete()
+                    if (cont.isActive) cont.resume(GestureDispatch.Stopped("DISPATCH_REJECTED"))
+                }
+            } catch (failure: Throwable) {
                 input.complete()
                 throw failure
-            }
-            if (!accepted) {
-                input.complete()
-                if (cont.isActive) cont.resume(false)
             }
             // Deliberately no invokeOnCancellation cleanup: Android may still be moving the pointer.
         }

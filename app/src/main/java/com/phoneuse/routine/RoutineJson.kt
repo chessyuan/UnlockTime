@@ -85,7 +85,7 @@ object RoutineJson {
             conversationId = o.long("conversation_id"),
             sendWithoutConfirm = o.bool("send_without_confirm") ?: false,
             sendTo = o.str("send_to")?.take(MAX_TEXT),
-            sendBody = o.str("send_body")?.take(Routine.MAX_PROMPT),
+            sendBody = o.str("send_body")?.take(Routine.MAX_FIXED_SEND_BODY),
             cardKey = o.str("card_key"),
             definitionRevision = o.str("definition_revision") ?: base.definitionRevision,
             legacyId = o.str("legacy_id"),
@@ -167,7 +167,6 @@ object RoutineJson {
         }
         "ask" -> {
             val prompt = a.str("prompt")?.trim()?.takeIf { it.isNotEmpty() } ?: throw Bad("action.prompt가 비었어요")
-            if (prompt.length > Routine.MAX_PROMPT) throw Bad("action.prompt는 ${Routine.MAX_PROMPT}자 이하여야 해요")
             val steps = steps(a["steps"])
             // An omitted flag is "operates the phone" (the safe side: held while locked); only an explicit false opts out,
             // and a step that operates apps overrides it.

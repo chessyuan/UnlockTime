@@ -1,6 +1,7 @@
 package com.phoneuse.agent
 
 import com.phoneuse.model.ToolSpec
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -17,6 +18,43 @@ private val coordX = prop("integer", "X pixel coordinate.")
 private val coordY = prop("integer", "Y pixel coordinate.")
 
 private val direction = enumProp("Scroll direction.", listOf("up", "down", "left", "right"))
+
+private fun repeatInteger(description: String, default: Long, max: Int? = null) = buildJsonObject {
+    put("type", "integer")
+    put("description", description)
+    put("minimum", 1)
+    max?.let { put("maximum", it) }
+    put("default", default)
+}
+
+private val repeatTap = ToolSpec(
+    RepeatTapRequest.NAME,
+    "Repeatedly tap one fixed screen position locally. Use one repeat_tap call for an actual auto-click, " +
+        "repeated, counted or timed tapping request. Resolve a named control on the current screen first. " +
+        "By default keep the same coordinates for the whole count, including normal page changes. " +
+        "Report the completed count and any stop reason from the result.",
+    JsonObject(
+        schema(
+            required = listOf("mode"),
+            props = mapOf(
+                "mode" to enumProp("point requires x/y. rect requires left/top/right/bottom.", listOf("point", "rect")),
+                "x" to prop("integer", "Display pixel x. In rect mode, supply both x/y inside the rectangle or omit both for its center."),
+                "y" to prop("integer", "Display pixel y. The target stays fixed for every tap."),
+                "left" to prop("integer", "Rect mode only. Inclusive left display pixel."),
+                "top" to prop("integer", "Rect mode only. Inclusive top display pixel."),
+                "right" to prop("integer", "Rect mode only. Exclusive right edge, up to the display width."),
+                "bottom" to prop("integer", "Rect mode only. Exclusive bottom edge, up to the display height."),
+                "count" to repeatInteger("Total taps in this call.", RepeatTapRequest.DEFAULT_COUNT.toLong(), RepeatTapRequest.MAX_COUNT),
+                "interval_ms" to repeatInteger("Time between tap starts in milliseconds.", RepeatTapRequest.DEFAULT_INTERVAL_MS),
+                "check_every" to repeatInteger(
+                    "Requested taps between page checks. Each local group has at most 10 taps.", RepeatTapRequest.DEFAULT_CHECK_EVERY.toLong(), RepeatTapRequest.MAX_COUNT,
+                ),
+                "stop_on_page_change" to prop("boolean", "Default false: fixed-coordinate clicking continues through page changes. Use true only when the user requests stopping on a page change."),
+                "user_authorized" to prop("boolean", "True if the user explicitly asked for this send/post action."),
+            ) + RiskJudge.PROPS,
+        ) + ("additionalProperties" to JsonPrimitive(false)),
+    ),
+)
 
 private val batchActions = buildJsonObject {
     put("type", "array")
@@ -154,13 +192,14 @@ internal object ScreenToolSpecs {
         ),
         ToolSpec(
             "batch",
-            "Run several steps, across several screens, in one call. Every call you save is seconds saved.",
+            "Run distinct steps across screens in one call. For repeated taps at one target use repeat_tap directly.",
             schema(required = listOf("actions"), props = mapOf("actions" to batchActions)),
         ),
         ToolSpec(
             "delegate",
             "Hand one mechanical, bounded piece of work in the open app to a fast helper model, e.g. scroll the " +
-                "whole result list and collect each item's name and price, page through reviews, or repeat a tap. " +
+                "whole result list and collect each item's name and price or page through reviews. " +
+                "The main assistant runs repeated taps with repeat_tap. " +
                 "The helper acts through the same safety checks, reports back with the screen it ended on, and you " +
                 "keep every decision: what to pick, what to answer. Do not delegate judgement, sending or paying.",
             schema(
@@ -177,5 +216,6 @@ internal object ScreenToolSpecs {
             "Look at the phone's current screen (element tree), optionally with a screenshot. Call it when you need the phone state.",
             schema(props = mapOf("screenshot" to prop("boolean", "Also capture a screenshot."))),
         ),
+        repeatTap,
     )
 }

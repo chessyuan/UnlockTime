@@ -633,7 +633,7 @@ class AgentRunner(
                     is AgentEvent.Finished -> {
                         finishing = true
                         st.reply = WebSearch.stripMarks(event.summary)
-                        st.outcome = RunOutcome.FINISHED
+                        st.outcome = if (event.success) RunOutcome.FINISHED else RunOutcome.FAILED
                         st.stayInApp = event.stayInApp
                     }
                     is AgentEvent.Failed -> {

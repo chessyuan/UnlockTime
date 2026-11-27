@@ -27,7 +27,9 @@ import com.phoneuse.service.PhoneUseAccessibilityService
 import com.phoneuse.ui.theme.PhoneUseTheme
 import com.phoneuse.ui.theme.isDark
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -66,6 +68,25 @@ class OverlayManager(private val service: AccessibilityService) : OverlayHooks, 
     private var blockerParams: WindowManager.LayoutParams? = null
     private var borderParams: WindowManager.LayoutParams? = null
     private var dockParams: WindowManager.LayoutParams? = null
+    private val windowIds = HashMap<View, Int>()
+
+    /** Main thread. Only these attached windows belong to the agent's pass-through overlay. */
+    internal fun accessibilityWindowIds(): Set<Int> {
+        if (!shown) return emptySet()
+        val ids = HashSet<Int>()
+        for (v in listOfNotNull(blocker, border, dock)) {
+            if (!v.isAttachedToWindow) continue
+            val id = windowIds[v] ?: run {
+                val node = v.createAccessibilityNodeInfo() ?: return@run -1
+                try { node.windowId } finally { @Suppress("DEPRECATION") node.recycle() }
+            }
+            if (id >= 0) {
+                windowIds[v] = id
+                ids.add(id)
+            }
+        }
+        return ids
+    }
 
     @Volatile
     private var shown = false
@@ -158,6 +179,7 @@ class OverlayManager(private val service: AccessibilityService) : OverlayHooks, 
         shown = false
         displayManager.unregisterDisplayListener(displayListener)
         for (v in listOfNotNull(dock, border, blocker)) runCatching { wm.removeView(v) }
+        windowIds.clear()
         dock = null
         border = null
         blocker = null
@@ -222,6 +244,7 @@ class OverlayManager(private val service: AccessibilityService) : OverlayHooks, 
     }
 
     override suspend fun <T> passThrough(x: Int, y: Int, block: suspend () -> T): T {
+        currentCoroutineContext().ensureActive()
         if (!shown) return block()
         var hidesDock = false
         var entered = false
@@ -290,7 +313,13 @@ class OverlayManager(private val service: AccessibilityService) : OverlayHooks, 
             for (v in views) {
                 suspendCancellableCoroutine<Unit> { cont ->
                     onMain {
-                        v.viewTreeObserver.registerFrameCommitCallback { if (cont.isActive) cont.resume(Unit) }
+                        if (!cont.isActive) return@onMain
+                        val observer = v.viewTreeObserver
+                        val frame = Runnable { if (cont.isActive) cont.resume(Unit) }
+                        observer.registerFrameCommitCallback(frame)
+                        cont.invokeOnCancellation {
+                            onMain { if (observer.isAlive) observer.unregisterFrameCommitCallback(frame) }
+                        }
                         v.invalidate()
                     }
                 }

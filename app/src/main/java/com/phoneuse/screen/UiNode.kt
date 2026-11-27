@@ -61,6 +61,9 @@ data class UiNode(
 }
 
 
+/** Actual visible application-window geometry, independent of an app's optional accessibility nodes. */
+data class AppWindowRegion(val windowId: Int, val packageName: String, val bounds: Bounds)
+
 data class ScreenSnapshot(
     val packageName: String?,
     val displayWidth: Int,
@@ -77,9 +80,30 @@ data class ScreenSnapshot(
     val activeIsSystem: Boolean = false,
     /** The read stopped early (its time ran out or the tree was huge): later parts of the tree are missing. */
     val truncated: Boolean = false,
+    val appWindowRegions: List<AppWindowRegion> = emptyList(),
 ) {
     /** The roots of application windows (not system UI). */
     val appRoots: List<UiNode> get() = roots.filter { it.windowId !in systemWindowIds }
+
+    /** A single app surface with no usable node layout, e.g. WeChat's drawn web page. */
+    val drawnRegion: Bounds? get() {
+        if (truncated || ownAppInFront || activeIsSystem || keyboardVisible || packageName.isNullOrBlank()) return null
+        val root = appRoots.singleOrNull() ?: return null
+        if (!root.bounds.isEmpty || root.children.isNotEmpty() || root.password || root.editable) return null
+        if (appWindowRegions.isEmpty() || appWindowRegions.any { it.windowId != root.windowId || it.packageName != packageName ||
+                it.bounds.isEmpty || !Bounds(0, 0, displayWidth, displayHeight).contains(it.bounds) }) return null
+        // A system edge handle splits the remaining app region into horizontal strips. Take
+        // their common width only if those strips cover every row, never their enclosing box.
+        val parts = appWindowRegions.map { it.bounds }.sortedBy { it.top }
+        val inner = Bounds(parts.maxOf { it.left }, parts.first().top, parts.minOf { it.right }, parts.maxOf { it.bottom })
+        if (inner.isEmpty) return null
+        var bottom = inner.top
+        for (part in parts) {
+            if (part.top > bottom) return null
+            bottom = maxOf(bottom, part.bottom)
+        }
+        return inner
+    }
 
     companion object {
         /** A typical phone (xxhdpi-ish); used only when the real density is not known. */

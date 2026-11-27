@@ -82,7 +82,7 @@ sealed interface AgentEvent {
     data class DeviceTaskDone(val packageName: String, val actions: List<String>, val summary: String = "") : AgentEvent
     data class Usage(val step: Int, val inputTokens: Int, val outputTokens: Int, val millis: Long, val cachedTokens: Int = 0) : AgentEvent
     /** [stayInApp]: the model's finish said the result is the other app on screen (see ReturnPolicy). */
-    data class Finished(val summary: String, val stayInApp: Boolean = false) : AgentEvent
+    data class Finished(val summary: String, val stayInApp: Boolean = false, val success: Boolean = true) : AgentEvent
     /** [code]: the model error's code, when a model call is what failed. */
     data class Failed(val message: String, val code: String? = null) : AgentEvent
     data object Cancelled : AgentEvent
@@ -280,11 +280,12 @@ class AgentLoop(
         }
 
         var step = 0
+        var repeatRouting = RepeatTapRouting(message, standalone = history.isEmpty() && images.isEmpty())
         // The screen of the last step may still change (see Speculation); the next model call watches it.
         var watch: ScreenWatch? = null
         var overflowRetried = false
         while (true) {
-            addSteering(input)
+            addSteering(input)?.let { repeatRouting = repeatRouting.steered(it) }
             if (step >= maxSteps) throw Fail(tr("Step limit exceeded", "단계 한도 초과"))
             step++
             emit(AgentEvent.Thinking)
@@ -311,6 +312,7 @@ class AgentLoop(
                 val observed = executor.observe()
                 observed.screen?.let { current = it }
                 addOutput(InputItem.UserText(SCREEN_CHANGED + observed.output.removePrefix("# Screen\n")), observed.screen)
+                observed.screenshot?.let { addImage(input, it) }
                 watch = executor.takeWatch()
             }
             watch = null
@@ -373,6 +375,13 @@ class AgentLoop(
                     addOutput(InputItem.FunctionOutput(call.callId, if (ended) AFTER_FINISH else ONE_ACTION), null)
                     continue
                 }
+                val rejection = repeatRouting.rejection(call, current)
+                if (rejection != null) {
+                    if (BuildConfig.DEBUG) TRACE.info("step=$step call=${call.name} rejected=$rejection")
+                    input += call
+                    addOutput(InputItem.FunctionOutput(call.callId, rejection), null)
+                    continue
+                }
                 if (!deviceUsed && (call.name in ToolExecutor.DEVICE_TOOLS || call.name == "delegate")) {
                     // Before the helper's first look as well: the touch blocker and the service check come first.
                     emit(AgentEvent.DeviceUse)
@@ -398,7 +407,13 @@ class AgentLoop(
                     r.screen?.let { current = it }
                     continue
                 }
-                val result = executor.execute(call, current)
+                // A coordinate or rectangle from the user's order needs local validation even when this
+                // is the model's first tool. The routing check above already verified the proposed geometry.
+                val targetScreen = if (current == null && call.name == RepeatTapRequest.NAME && repeatRouting.hasUserGeometry) {
+                    executor.observeRepeatPosition()
+                } else current
+                val result = executor.execute(call, targetScreen)
+                repeatRouting.record(call, result.output)
                 // Debug builds only: arguments and outputs carry typed text, messages and screen contents.
                 if (BuildConfig.DEBUG) {
                     TRACE.info("step=$step call=${call.name} args=${call.argumentsJson.take(300)} -> ${result.output.take(1500).replace('\n', '|')}")
@@ -436,7 +451,7 @@ class AgentLoop(
                     // The model's stay_in_app is not taken on its word: a game it finished or a form it filled is
                     // not something the user stays to watch, so after working in an app only live media or a call keeps it.
                     val stayHonoured = result.stayInApp && (!worked || executor.playingOrInCall())
-                    emit(AgentEvent.Finished(result.finishedSummary, stayHonoured))
+                    emit(AgentEvent.Finished(result.finishedSummary, stayHonoured, result.finishedOk))
                     return
                 }
             }
@@ -446,11 +461,13 @@ class AgentLoop(
     }
 
     /** Adds the user's instructions sent while the run works, as user messages; they count as the user's words. */
-    private fun addSteering(input: MutableList<InputItem>) {
-        for (text in steering.drain()) {
+    private fun addSteering(input: MutableList<InputItem>): String? {
+        val messages = steering.drain()
+        for (text in messages) {
             executor.userSaid(text)
             input += InputItem.UserText("사용자 추가 지시: $text")
         }
+        return messages.lastOrNull()
     }
 
     /** Characters of text and reasoning in [input] (images not counted), for the trim budget. */
@@ -697,7 +714,10 @@ class AgentLoop(
     }
 
     private fun describe(call: InputItem.FunctionCall, current: CompressedScreen?, korean: Boolean = Lang.korean): String {
-        val verb = VERBS[call.name]?.let { if (korean) it.second else it.first } ?: call.name
+        val verb = when {
+            !korean && Lang.chinese && call.name == RepeatTapRequest.NAME -> "连续点击"
+            else -> VERBS[call.name]?.let { if (korean) it.second else it.first } ?: call.name
+        }
         val args = try {
             Json.parseToJsonElement(call.argumentsJson) as? JsonObject
         } catch (e: Exception) {
@@ -752,7 +772,7 @@ class AgentLoop(
         val QUIET_TOOLS = setOf("finish", "show_card", "remember", "forget", "delegate")
 
         /** Actions that make up an app tip: the ones that change the screen. */
-        val TIP_ACTIONS = setOf("tap", "long_press", "type_text", "scroll", "swipe", "pinch", "press_key", "open_app", "open_uri", "batch")
+        val TIP_ACTIONS = setOf("tap", RepeatTapRequest.NAME, "long_press", "type_text", "scroll", "swipe", "pinch", "press_key", "open_app", "open_uri", "batch")
 
         /** Actions that work inside an app, as opposed to only opening one. */
         val WORK_TOOLS = TIP_ACTIONS - setOf("open_app", "open_uri") + "delegate"
@@ -772,6 +792,7 @@ class AgentLoop(
         val VERBS: Map<String, Pair<String, String>> = mapOf(
             "update_plan" to ("Plan" to "계획"),
             "tap" to ("Tap" to "탭"), "long_press" to ("Long press" to "길게 누르기"), "type_text" to ("Type" to "입력"),
+            RepeatTapRequest.NAME to ("Repeat tap" to "반복 탭"),
             "scroll" to ("Scroll" to "스크롤"), "swipe" to ("Swipe" to "스와이프"), "pinch" to ("Zoom" to "확대/축소"), "press_key" to ("Key" to "키"),
             "open_app" to ("Open app" to "앱 열기"), "open_uri" to ("Open link" to "링크 열기"),
             "list_apps" to ("App list" to "앱 목록"), "screenshot" to ("Screenshot" to "스크린샷"), "wait" to ("Wait" to "대기"),

@@ -1,0 +1,91 @@
+{
+  "date": "2026-11-26",
+  "timezone": "Asia/Shanghai",
+  "versionName": "0.6.4",
+  "versionCode": 17,
+  "applicationId": "org.localwake.app",
+  "apkSha256": "d387f9a9093558537594183c681b2297180659314fc2d4b2f3aea3dd58bc6b44",
+  "device": {
+    "model": "SM-S9260",
+    "android": 16
+  },
+  "realTrial": {
+    "count": 1,
+    "entry": "Run now on the existing saved routine",
+    "environment": "WeChat real reservation page",
+    "fullPromptUnchanged": true,
+    "repeatToolCalls": 1,
+    "request": {
+      "mode": "point",
+      "count": 60,
+      "interval_ms": 1000,
+      "check_every": 10,
+      "stop_on_page_change": false
+    },
+    "completedGestureCallbacks": 60,
+    "stopReason": "COMPLETED",
+    "toolDurationMs": 61435,
+    "historyResult": "AGENT_COMPLETED",
+    "recentsEmptyObserved": true,
+    "newReservationSuccess": "not established: seat already in use before test",
+    "perTouchTimingsIndependentlyMeasured": false,
+    "alarmFiringRetested": false,
+    "automaticUnlockRetested": false,
+    "publicFixture": "Task structure retained; personal identifiers and schedule replaced with synthetic examples."
+  },
+  "preserved": {
+    "routineCount": 3,
+    "routineDefinitionsUnchanged": true,
+    "accessibilityEnabled": true,
+    "accessibilityBound": true,
+    "failureGuard": false
+  },
+  "jvm": {
+    "tests": 1698,
+    "passed": 1695,
+    "skipped": 3,
+    "failures": 0,
+    "errors": 0
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 106
+  },
+  "build": "SUCCESS",
+  "automaticUnlockFollowup": {
+    "date": "2026-11-26",
+    "realRounds": 3,
+    "passed": 3,
+    "failed": 0,
+    "method": "Submit an AI open-calculator request, lock before first device access, require system credential authentication, observe native unlock and AI screen read.",
+    "startedSecurelyLocked": true,
+    "allEndedFullyUnlocked": true,
+    "calculatorForegroundConfirmed": true,
+    "taskDefinitionsUnchanged": true,
+    "accessibilityEnabled": true,
+    "accessibilityBound": true,
+    "backgroundGuardRunning": true,
+    "failureGuard": false,
+    "overnightStandbyTested": false,
+    "dailyBusinessActionsRepeated": false,
+    "codeChangedForFollowup": false
+  },
+  "publicSourceValidation": {
+    "date": "2026-11-27",
+    "command": "gradlew.bat --offline --console=plain :app:testDebugUnitTest :app:lintDebug",
+    "result": "BUILD SUCCESSFUL",
+    "jvm": {
+      "tests": 1698,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 3
+    },
+    "lint": {
+      "Error": 0,
+      "Warning": 97,
+      "Fatal": 0
+    },
+    "productionCodeChanged": false,
+    "fixturesAnonymized": true
+  }
+}

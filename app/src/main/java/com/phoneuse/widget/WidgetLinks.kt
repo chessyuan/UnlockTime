@@ -3,6 +3,10 @@ package com.phoneuse.widget
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import java.io.File
+import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import com.phoneuse.ui.LaunchTargets
 import com.phoneuse.ui.LaunchToken
 import com.phoneuse.ui.MainActivity
@@ -23,34 +27,59 @@ object WidgetLinks {
     const val EXTRA_PROMPT = "com.phoneuse.extra.WIDGET_PROMPT"
     const val EXTRA_TYPED = "com.phoneuse.extra.WIDGET_TYPED"
     const val EXTRA_TARGET = "com.phoneuse.extra.WIDGET_TARGET"
-    const val MAX_PROMPT = 1_000
+    // Binder transports small strings inline. Longer text stays in the application's private cache.
+    private const val INLINE_CHARS = 8192
+    private const val EXTRA_STORED = "com.phoneuse.extra.STORED_WIDGET_PROMPT"
+    private val signedName = Regex("[A-Za-z0-9_-]{43}")
 
     /** Opens the chat and starts [prompt] there, through the same path as text sent from the composer. */
     fun prompt(context: Context, prompt: WidgetPrompt): Intent {
-        val text = prompt.text.trim().take(MAX_PROMPT)
+        val text = prompt.text.trim()
         val payload = LaunchToken.widgetPrompt(prompt.typed, prompt.conversationId, text)
+        val signature = LaunchToken.of(context).sign(payload)
         return Intent(context, MainActivity::class.java)
             .setData(Uri.parse(LaunchTargets.uri(LaunchTargets.Kind.WIDGET, "prompt/" + Integer.toHexString(payload.hashCode()))))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            .putExtra(EXTRA_PROMPT, text)
+            .apply {
+                if (text.length <= INLINE_CHARS) putExtra(EXTRA_PROMPT, text)
+                else {
+                    val dir = File(context.cacheDir, "widget-prompts")
+                    if (!dir.isDirectory && !dir.mkdirs() && !dir.isDirectory) throw IOException("Widget prompt storage unavailable")
+                    val cutoff = System.currentTimeMillis() - 86_400_000L
+                    dir.listFiles()?.filter { it.name.matches(signedName) && it.lastModified() < cutoff }?.forEach { it.delete() }
+                    val temp = File.createTempFile("prompt-", ".tmp", dir)
+                    try {
+                        temp.writeText(text)
+                        Files.move(temp.toPath(), File(dir, signature).toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+                    } finally {
+                        temp.delete()
+                    }
+                    putExtra(EXTRA_STORED, true)
+                }
+            }
             .putExtra(EXTRA_TYPED, prompt.typed)
             .putExtra(EXTRA_TARGET, prompt.conversationId ?: -1L)
-            .putExtra(LaunchToken.EXTRA, LaunchToken.of(context).sign(payload))
+            .putExtra(LaunchToken.EXTRA, signature)
     }
 
     /** The verified prompt on an intent MainActivity received, or null (none, or not signed by us). */
     fun promptOf(context: Context, intent: Intent?): WidgetPrompt? {
-        val text = intent?.getStringExtra(EXTRA_PROMPT) ?: return null
+        if (intent == null) return null
+        val signature = intent.getStringExtra(LaunchToken.EXTRA) ?: return null
+        val text = if (intent.getBooleanExtra(EXTRA_STORED, false)) {
+            if (!signedName.matches(signature)) return null
+            try { File(File(context.cacheDir, "widget-prompts"), signature).readText() } catch (_: IOException) { return null }
+        } else intent.getStringExtra(EXTRA_PROMPT) ?: return null
         return accept(
             LaunchToken.of(context), text, intent.getBooleanExtra(EXTRA_TYPED, false),
-            intent.getLongExtra(EXTRA_TARGET, -1L), intent.getStringExtra(LaunchToken.EXTRA),
+            intent.getLongExtra(EXTRA_TARGET, -1L), signature,
         )
     }
 
     /** Pure check behind [promptOf]: the signature must cover the text, the kind and the target. */
     fun accept(token: LaunchToken, text: String, typed: Boolean, target: Long, signature: String?): WidgetPrompt? {
         val conversation = target.takeIf { it >= 0 }
-        if (text.isBlank() || text.length > MAX_PROMPT) return null
+        if (text.isBlank()) return null
         if (!token.verify(LaunchToken.widgetPrompt(typed, conversation, text), signature)) return null
         return WidgetPrompt(text, typed, conversation)
     }

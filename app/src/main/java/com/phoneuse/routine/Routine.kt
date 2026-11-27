@@ -143,7 +143,7 @@ data class Routine(
         const val MAX_TITLE = 80
         const val MAX_ROUTINES = 32
         const val MAX_LATENESS_MS = 600_000L
-        const val MAX_PROMPT = 1000
+        const val MAX_FIXED_SEND_BODY = 1000
 
         /** Android allows an app at most 100 geofences. */
         const val MAX_PLACES = 100

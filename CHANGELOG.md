@@ -1,0 +1,100 @@
+# UnlockTime changes
+
+## 0.6.4 / build 17
+
+- Fix an execution request being rejected as a discussion when it contains an instruction such as “不要设置 stop_on_page_change=true” or “do not stop when the page changes”. A negative option instruction no longer blocks the local repeat-tap call. Explicit requests not to click remain blocked.
+- Add regression coverage using the complete Chinese task that reproduced the rejection. Debug traces now record the exact routing rejection reason without recording additional arguments.
+
+## 0.6.3 / build 16
+
+- Fixed-position repeat tapping now completes the requested local count through ordinary in-app page changes. One request for 60 taps runs locally at the specified interval, without model decisions between taps. Stop-on-page-change is an explicit optional tool argument, not a user-facing switch.
+- Restore the ordinary Agent flow. Remove the reservation-specific parser, OCR dependency and forced finish/retry rewriting introduced after build 13.
+- Keep local automatic unlock, the independent `repeat_tap` tool and long routine prompts. Existing task definitions and credentials are unchanged.
+- Let a stopped tap sequence return its count without blocking unrelated navigation or cleanup in the same task.
+- Refresh the image together with the UI tree after a page change. Support real application-window bounds when WeChat exposes an empty node tree; compare permitted page pixels between repeat-tap groups.
+- Avoid treating a whole-page collection of labels as the effect of a normal vertical scroll. Actual risky controls retain their confirmations.
+
+## 0.6.1 / build 14
+
+- Check the phone's completed tap count before ending a task. A missed step gets one chance to run. A temporarily rejected gesture can resume from the remaining count on the same checked page.
+- Verify the requested seat and date on one visible reservation record. Image-only web pages can be read locally. An existing booking and an unreadable record have different outcomes.
+- Remove the 1,000-character AI task prompt limit. Saved routines and quick asks retain the full text, including line breaks.
+
+## 0.6.0 / build 13
+
+- Ask the AI for a fixed number of taps on one button, pixel coordinate or rectangle. Both direct requests and AI routines use the same tool. Android's gesture callbacks confirm the number completed.
+- Recheck the foreground app, controls and capture permission between groups. Page changes and cancelled gestures stop the sequence. Existing risk confirmations cover the requested number of taps.
+- Bring in the screen-capture safety fix from OpenPhoneUse v0.0.8. On Android 14 or later, probe application windows individually to detect a protected window even when the display image masks it. Repeat taps require this window-level check.
+
+## 0.5.0 / build 12 — unified integration (validation in progress)
+
+- Integrates the fixed OpenPhoneUse Agent and the existing UnlockTime local engine in one application.
+- Preserves org.localwake.app, original accessibility component, credential identities and task migration source.
+- Adds global automatic local unlock, shared revocable screen ownership and sensitive editor protection.
+- Adds native Once/app sequences and versioned task authority, recovery and failure guard preservation.
+- Uses a single AI/routine/settings UI, English default with Simplified Chinese, existing monochrome icon and complete source notices.
+- Defaults voice input to English, adds Simplified Chinese and preserves saved Korean preferences. AI history cleanup retains device tasks, execution history, credentials and accounts.
+- Validation-12 completed: 1,599 JVM tests (1,596 passed / 3 skipped), Lint 0 errors / 102 warnings, API 31 local agent PASS. The same-signature Samsung update preserved tasks and account state; three strong-authentication pattern runs passed with one dispatch each. This does not certify every business automation.
+- After the first timed trial stopped at a SEND card despite the setting already being off, source now honors local GUI SEND opt-out for direct local requests and saved non-third-party-triggered routines. Money/security/deletion/SMS, remote/module and helper confirmation boundaries remain; taint continues to be recorded.
+- Validation-13 completed: 1,621 JVM tests (1,618 passed / 3 skipped), 190 suites, Lint 0 errors / 102 warnings, build 3m 28s, API 31 local agent PASS. Same-signature Samsung update retained the two task definitions. Both existing timed tasks then completed without manual confirmation/resuming; the user confirmed automatic unlock and the full flow, and persisted history/occurrences confirmed completion. Target-app business rejection is recorded separately from the successful unattended execution flow.
+- Adds guarded rearming when the user explicitly edits a previously claimed daily task back to a future time that day. This creates a new revision without replaying old tokens or weakening failure guards/cooldowns. Original daily times, enabled state, prompt hashes and 60-minute cooldown were restored through normal UI and checked, including new pending occurrences for today; the failure guard remained clear.
+- Publishes curated evidence summaries only; private artifacts and screenshots are excluded from source archives. Original source workspaces remain unchanged.
+- Delivers the validated 0.5.0/build12 debug APK to local deliverables and the designated sync directory with source/destination and installed-APK hash equality. Cloud synchronization is not verified; matching source/notes/checksum files require a separate delivery receipt.
+- Real release acceptance and actual test counts are recorded in docs/UNIFIED_TEST_REPORT.md; previous build11 tests do not certify this integration.
+
+## Historical OpenPhoneUse changelog
+
+# Changelog
+
+All notable changes to OpenPhoneUse are listed here, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The Android package id is `com.phoneuse`.
+
+## [Unreleased]
+
+## [0.0.7] - 2026-11-15
+
+- **Any OpenAI-compatible server.** A new "Other" provider takes a base URL and an API key. Presets fill in OpenRouter, Groq, Mistral, Together, DeepSeek, Ollama and LM Studio, or you can enter any server that speaks Chat Completions, then pick a model from the list it offers. A local server may need no key. The model must support tool calling. Plain http works only for a server on the phone itself; anything else needs https.
+- **Routines follow the app language.** The message a routine sends when it starts on its own used Korean for its fixed lines, so an English phone saw Korean at the start and end of the routine's conversation. Those lines now follow the app language.
+- **Choose how soon a routine may run again.** Routines that start on a place, a notification, a device or a calendar event have a "Run again after" choice: every time, 5 minutes, 15 minutes, 1 hour or once a day. Before, it was always one hour. Running a routine by hand with "Run now" no longer starts the wait. A routine that starts on a notification or a device and calls the model still waits at least 5 minutes, so a busy app cannot start runs back to back.
+
+## [0.0.6] - 2026-11-13
+
+- **No texts, calls, call log or contacts permissions.** Galaxy phones refused to install the app as a suspected phishing app ("악성 앱으로 의심"), and those permissions next to accessibility are what phishing apps ask for. The APK now leaves them out. Calls, texts and contacts go through the phone's own Phone, Messages and Contacts apps on screen, and the `call`, `send_sms`, `sms_search`, `find_contact`, `recent_calls` and `add_contact` tools are offered only in a build that declares those permissions.
+
+## [0.0.5] - 2026-11-13
+
+- **An even smaller download.** The APK is about 6 MB. R8 now also shrinks the Anthropic SDK, using the rules the SDK ships for it; Claude requests, streamed replies, thinking and tool calls were checked on a shrunk build.
+
+## [0.0.4] - 2026-11-12
+
+- **A smaller download.** The APK is about 13 MB instead of 75 MB. Release builds are now shrunk with R8 and their code is stored compressed. Nothing changes in what the app does.
+
+## [0.0.3] - 2026-11-11
+
+- **The default model follows new releases.** The model sheet has an "Auto · always the newest" choice at the top. While it is on, the default moves to the highest-numbered model of the same family in your provider's own list (for example GPT-6.1 Terra to GPT-6.2 Terra), and the lighter model used for routine steps follows the same way. Tiers, previews and dated snapshots never replace one another. Picking a model by hand keeps it until you choose Auto again. With an OpenAI key, the list now shows only chat models.
+- **Updated libraries.** Jetpack Compose, the Android Gradle Plugin 9.5, Kotlin 2.4.21, OkHttp 5 and the Anthropic SDK 3.6 are updated, and the app now compiles against Android 37. It still targets Android 36, so nothing changes in how it behaves on your phone.
+
+## [0.0.2] - 2026-11-11
+
+- **A calmer look.** The side-button sheet rises from the bottom with a plain shadow instead of a blue glow, shows three suggestions for the screen, and has one button that is the mic while the box is empty and send once you type. "Continue" is a text toggle at the top. The six home-screen widgets are redrawn, and the widget list now shows what each one looks like. Accents are down to one orange: the blue edge glow, purple memory and security cards, amber payment cards and green checks are gone. The other screens are unchanged.
+- **The basics, done directly.** Calls, texts, alarms and timers no longer go through the screen. A new `call` tool calls a number or a contact by name. `send_sms` takes a name too and no longer shows a draft card before its confirmation. `set_alarm` takes repeat days, and a new `set_timer` starts a countdown. Each has its own confirmation card; a call, alarm or timer you asked for in your own message goes ahead without it, and so does a contact whose name and number you typed yourself. More direct tools: `flashlight`, `set_volume` (with ringer mode), `media_control`, `device_status`, `recent_calls` and `add_contact`. The app asks for the phone-call, call-log and write-contacts permissions when these are first used, and silent mode needs Do Not Disturb access. An alarm or timer the app could not check afterwards is reported as requested, not as set.
+- **Tidying a large folder.** A new `move_files` tool moves every file matching a name pattern in one call, `list_dir` pages through long folders and counts what they hold by type, and the agent now sorts a folder by kind instead of asking for a scope. Before, a Download folder with hundreds of files ended in "please narrow it down". File steps also show plain words instead of tool names.
+- **Back to the chat after a task.** A run that worked inside another app now returns to the chat when it ends, unless media is playing or a call is active. Before, a finished game, a filled form or a photo could leave you in that app.
+- **What leaves the phone, stated correctly.** The READMEs and landing page now list what a task can send to the model provider and to OpenStreetMap, and the routine map credits OpenStreetMap.
+- **Open-source licences in the app.** Settings → About lists every bundled library and its licence, generated at build time. The sign-in notice now says routines can use your plan in the background. The install notes explain the Google Play Protect warnings.
+
+## [0.0.1] - 2026-11-04
+
+First release.
+
+- **Operates the phone like a person.** The agent reads each screen through Android's accessibility service, as an element list and a numbered screenshot, then taps, types, scrolls and moves between apps. It runs on the phone, with no PC, ADB or root.
+- **Your choice of model.** Sign in with a ChatGPT plan, or use an OpenAI, Claude, Grok or Gemini API key. GPT-6.1 Terra with fast mode is the default.
+- **Asks before it matters.** Money and security actions always ask first, and bulk or permanent deletes do too. The model never types passwords, and keys stay in the Android Keystore.
+- **A full chat app.** Memory, web search with sources, voice input, routines, a Today brief, home-screen widgets and notifications that can act.
+- **Plan limits handled honestly.** A ChatGPT plan sign-in reports no usage data, so the app links to "Manage usage" in ChatGPT settings. After a usage limit, automatic requests stop for an hour while what you type still goes through.
+- **Benchmark suite** in `bench/`, with graded rubrics, blind judge packets and a score report.
+
+Anyone with an earlier test build must uninstall it first: those were signed with a different key and carry a higher version code.
+
+[0.0.3]: https://github.com/joungminsung/openphoneuse/releases/tag/v0.0.3
+[0.0.2]: https://github.com/joungminsung/openphoneuse/releases/tag/v0.0.2
+[0.0.1]: https://github.com/joungminsung/openphoneuse/releases/tag/v0.0.1

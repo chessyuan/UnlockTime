@@ -18,7 +18,7 @@ import kotlinx.serialization.json.putJsonObject
 
 /**
  * The fast helper behind the main model's `delegate` tool: a lighter model (Luna) does one mechanical, bounded
- * piece of phone work — scrolling a list and collecting its items, paging through results, repeating taps — and
+ * piece of phone work such as scrolling a list and collecting its items or paging through results, and
  * reports back. The main model (Terra) keeps every judgement: it plans, reads the report and answers. The helper
  * acts through the same [ToolExecutor], so every risk check, confirmation and taint rule applies unchanged.
  * It keeps its own reasoning and a journal of screens between steps and judges its own progress; a model error or a
@@ -198,6 +198,7 @@ class Helper(
             You are the fast helper of a phone assistant. The main assistant gave you one concrete, mechanical task on the app that is open now. Do exactly that task, quickly, then call report.
             - You read the screen as a text tree; act on elements by their [n] index. A list with more-below has more items: scroll on.
             - Only the first call of each response runs. Do several predictable steps per call with batch (elements on screens you have not seen can be named by args.target, their visible label).
+            - A repeated-tap request belongs to the main assistant's repeat_tap tool. If asked to do one, report ok=false before tapping.
             - Collect facts exactly as shown (names, prices, dates, counts). Do not judge, choose or recommend: the main assistant decides.
             - Stay in this app. Do not send, pay, delete, log in or change settings; if the task needs that, report and say so.
             ${RiskJudge.PROMPT}

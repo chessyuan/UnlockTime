@@ -10,6 +10,7 @@ import com.phoneuse.agent.ScreenInterruptedException
 import com.phoneuse.agent.ScreenMark
 import com.phoneuse.agent.ServiceUnavailableException
 import com.phoneuse.agent.SettleKind
+import com.phoneuse.agent.TapSequenceResult
 import com.phoneuse.agent.UserGate
 import com.phoneuse.assist.VoiceBridge
 import com.phoneuse.overlay.AgentPhase
@@ -182,9 +183,14 @@ internal object LiveDeviceController : DeviceController {
 
     override fun interruptions(): Int = VoiceBridge.sessions
     override suspend fun snapshot(): ScreenSnapshot = ready().snapshot()
+    override suspend fun freshSnapshot(): ScreenSnapshot = ready().freshSnapshot()
     override suspend fun screenshot(): ByteArray? = ready().screenshot()
+    override suspend fun canCaptureScreen(): Boolean = ready().canCaptureScreen()
     override suspend fun markedScreenshot(marks: List<ScreenMark>): ByteArray? = ready().markedScreenshot(marks)
     override suspend fun tap(x: Int, y: Int): Boolean = readyToAct().tap(x, y)
+    override fun pageChangeVersion(): Long? = PhoneUseAccessibilityService.instance?.controller?.pageChangeVersion()
+    override suspend fun tapSequence(x: Int, y: Int, count: Int, intervalMs: Long, expectedVersion: Long?): TapSequenceResult =
+        device().tapSequence(x, y, count, intervalMs, expectedVersion)
     override suspend fun longPress(x: Int, y: Int): Boolean = readyToAct().longPress(x, y)
     override suspend fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long): Boolean =
         readyToAct().swipe(x1, y1, x2, y2, durationMs)

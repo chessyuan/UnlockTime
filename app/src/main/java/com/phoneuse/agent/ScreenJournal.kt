@@ -19,6 +19,7 @@ class ScreenJournal {
      * the earlier steps and actions; null for a new screen.
      */
     fun revisit(step: Int, action: String, screen: CompressedScreen): String? {
+        if (screen.visualOnly) return null
         val print = fingerprint(screen)
         val before = visits.filter { it.screen == print }
         visits += Visit(print, step, action)

@@ -14,8 +14,8 @@ android {
         applicationId = "org.localwake.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 12
-        versionName = "0.5.0"
+        versionCode = 17
+        versionName = "0.6.4"
         // AGP replaces the manifest runner with this value. Select the guarded physical-device
         // fixture explicitly when building its separate test APK; the shipped app has no runner.
         testInstrumentationRunner = providers.gradleProperty("unlocktime.testRunner")

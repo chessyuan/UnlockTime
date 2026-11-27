@@ -43,6 +43,63 @@ class IdleWaiterTest {
 
     private fun TestScope.waiter() = IdleWaiter { currentTime }
 
+    @Test fun everyEffectiveChangeGetsANewVersionEvenInTheSameMillisecond() = runTest {
+        val w = waiter()
+        val first = w.pageChangeVersion(1, 0)
+        w.onEvent("com.example", IdleWaiter.TYPE_WINDOW_STATE_CHANGED, 7)
+        val second = w.pageChangeVersion(1, 0)
+        w.onEvent("com.example", IdleWaiter.TYPE_WINDOW_CONTENT_CHANGED, 7, "TextView")
+        val third = w.pageChangeVersion(1, 0)
+        assertTrue(first < second && second < third)
+        assertEquals(0L, w.lastEventAt)
+        assertEquals(third, w.pageChangeVersion(1, 0))
+        w.onEvent("com.example", IdleWaiter.TYPE_VIEW_TEXT_CHANGED, 7, "TextView")
+        assertTrue(w.pageChangeVersion(1, 0) > third)
+    }
+
+    @Test fun pageVersionFiltersOverlayClickFocusAndSurfaceNoiseButPreservesExternalWindowChanges() = runTest {
+        val w = waiter()
+        w.ignoredWindows = setOf(9)
+        val original = w.pageChangeVersion(1, 0)
+        w.ownWindowsChanged()
+        w.onEvent(null, IdleWaiter.TYPE_WINDOWS_CHANGED)
+        w.onEvent(null, IdleWaiter.TYPE_WINDOWS_CHANGED, 9)
+        w.onEvent(com.phoneuse.BuildConfig.APPLICATION_ID, IdleWaiter.TYPE_WINDOW_CONTENT_CHANGED)
+        w.onEvent("com.example", IdleWaiter.TYPE_VIEW_CLICKED, 7)
+        w.onEvent("com.example", IdleWaiter.TYPE_VIEW_FOCUSED, 7)
+        w.onEvent("com.example", IdleWaiter.TYPE_WINDOW_CONTENT_CHANGED, 7, "android.view.TextureView")
+        assertEquals(original, w.pageChangeVersion(1, 0))
+        // WindowManager can omit the package even for an identified external activity window.
+        w.onEvent(null, IdleWaiter.TYPE_WINDOWS_CHANGED, 7)
+        val external = w.pageChangeVersion(1, 0)
+        assertTrue(external > original)
+        // A simultaneous real window opening also survives an otherwise anonymous overlay notification.
+        w.onEvent(null, IdleWaiter.TYPE_WINDOWS_CHANGED, externalWindowsChanged = true)
+        assertTrue(w.pageChangeVersion(1, 0) > external)
+    }
+
+    @Test fun anEstablishedAnimationDoesNotHideAChangeFromAnotherPackage() = runTest {
+        val w = waiter()
+        repeat(10) {
+            w.onEvent("com.player", IdleWaiter.TYPE_WINDOW_CONTENT_CHANGED, 7, "TextView")
+            delay(100)
+        }
+        val stable = w.pageChangeVersion(1, 0)
+        w.onEvent("com.player", IdleWaiter.TYPE_WINDOW_CONTENT_CHANGED, 7, "TextView")
+        assertEquals(stable, w.pageChangeVersion(1, 0))
+        w.onEvent("com.other", IdleWaiter.TYPE_WINDOW_CONTENT_CHANGED, 7, "TextView")
+        assertTrue(w.pageChangeVersion(1, 0) > stable)
+    }
+
+    @Test fun newTaskVoiceSessionAndServiceCannotReuseAnOldVersion() = runTest {
+        val w = waiter()
+        val first = w.pageChangeVersion(1, 0)
+        val nextLease = w.pageChangeVersion(2, 0)
+        val afterVoice = w.pageChangeVersion(2, 1)
+        val newService = waiter().pageChangeVersion(2, 1)
+        assertTrue(first < nextLease && nextLease < afterVoice && afterVoice < newService)
+    }
+
     /** Content changes from a different view each time: the page really keeps changing. */
     private fun TestScope.changing(w: IdleWaiter, windowId: Int = 1) = launch {
         var i = 0

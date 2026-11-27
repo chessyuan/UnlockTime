@@ -18,6 +18,14 @@ data class ScreenMark(val index: Int, val bounds: Bounds)
 
 data class AppInfo(val packageName: String, val label: String)
 
+/** Only gestures whose platform completion callback arrived are included in [completed]. */
+data class TapSequenceResult(
+    val completed: Int,
+    val stopReason: String? = null,
+    /** Platform uptime deadline; group checks use the same interval instead of adding a second wait. */
+    val nextTapAtUptimeMs: Long? = null,
+)
+
 class ServiceUnavailableException : Exception("accessibility service unavailable")
 
 /** An action waited while the user used voice input, so the screen it was aimed at may be gone. */
@@ -25,7 +33,11 @@ class ScreenInterruptedException : Exception("screen changed during voice input"
 
 interface DeviceController {
     suspend fun snapshot(): ScreenSnapshot
+    /** Starts a new read for a target being rechecked after input. */
+    suspend fun freshSnapshot(): ScreenSnapshot = snapshot()
     suspend fun screenshot(): ByteArray? // JPEG. null on a secure screen
+    /** Whether Android permits a capture now. A probe needs no copy of the image. */
+    suspend fun canCaptureScreen(): Boolean = screenshot() != null
 
     /**
      * A screenshot with each of [marks] outlined and labelled with its element number (Set-of-Mark), so the model
@@ -33,6 +45,13 @@ interface DeviceController {
      */
     suspend fun markedScreenshot(marks: List<ScreenMark>): ByteArray? = screenshot()
     suspend fun tap(x: Int, y: Int): Boolean
+    /** Opaque version of the current session's filtered page changes. Null when unavailable. */
+    fun pageChangeVersion(): Long? = null
+
+    /** Dispatches up to ten taps. Null [expectedVersion] keeps fixed coordinates across ordinary page changes. */
+    suspend fun tapSequence(x: Int, y: Int, count: Int, intervalMs: Long, expectedVersion: Long?): TapSequenceResult =
+        TapSequenceResult(0, "UNSUPPORTED")
+
     suspend fun longPress(x: Int, y: Int): Boolean
 
     /**

@@ -166,7 +166,9 @@ object AndroidDeviceAccess {
         // Accessibility overlays are our agent controls; actual application windows have no exemption.
         for (window in windows) {
             if (window.type != android.view.accessibility.AccessibilityWindowInfo.TYPE_APPLICATION) continue
-            @Suppress("DEPRECATION") val root = window.root
+            // Only the root's package is needed for ownership. The default getRoot() prefetches descendants.
+            @Suppress("DEPRECATION")
+            val root = if (android.os.Build.VERSION.SDK_INT >= 33) window.getRoot(0) else window.root
             try {
                 val pkg = root?.packageName?.toString()
                 if (pkg == app.packageName) rejectOwnSurface(lease)
